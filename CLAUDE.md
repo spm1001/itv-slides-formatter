@@ -4,403 +4,409 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Google Apps Script development project for creating a Google Slides and Sheets formatting tool. The project aims to automatically format Google Slides presentations and linked Google Sheets charts according to a standard template.
+Google Apps Script tool for automated Google Slides presentation formatting. Processes slides and linked objects (charts, tables) to ensure consistent formatting according to configurable rules.
 
-## Development Environment
+**Current Phase**: Phase 1 - Font swapping with hardcoded rules (Comic Sans MS ↔ Arial)
+**Future Phases**: Template-based formatting, UI selection, Sheets charts, external database, GCP integration
 
-This project has a comprehensive technical specification (see readme.md) ready for implementation. All development will use Google Apps Script (.gs files) and the Google Workspace APIs.
+## Architecture
 
-### Project Structure
+### Dual Environment Architecture
+
+This project operates in **two distinct environments** that must work together:
+
+1. **Local Node.js Environment** (development machine)
+   - Deployment scripts (`deploy-web-manual.js`, `auth-with-monitoring.js`)
+   - OAuth authentication management
+   - Automated testing and log retrieval
+   - MCP server for documentation access
+
+2. **Remote Apps Script Environment** (Google's servers)
+   - Execution of `.gs` files
+   - Google Slides API access
+   - User interface (menu in Google Sheets)
+   - Presentation processing
+
+**Key insight**: You edit files locally and deploy them to Google's servers where they actually run.
+
+### Apps Script File Architecture
+
 ```
-/home/modha/slider/
-├── docs/               # Documentation for machine transfer
-│   ├── CLAUDE.md       # Project instructions (this file)
-│   ├── LEARNING_LOG.md # Technical learning documentation
-│   ├── MACHINE_TRANSFER.md # New machine setup guide
-│   └── SECURITY_ALERT.md   # Security procedures
-├── src/                # Apps Script source files
-│   ├── main.gs         # Entry point and orchestration
-│   ├── config.gs       # YAML configuration management  
-│   ├── slides-api.gs   # Google Slides API interactions
-│   ├── formatter.gs    # Core formatting logic
-│   ├── ui.gs          # User interface and progress reporting
-│   ├── utils.gs       # Utility functions and helpers
-│   └── constants.gs   # API scopes, constants, and mappings
-├── config/            # Configuration files
-│   ├── apps-script-bundle.json # Apps Script project configuration
-│   ├── credentials.template.json # OAuth template
-│   └── workspace-dev-assist.json # MCP workspace config
-├── scripts/           # Deployment & security scripts
-├── secrets/           # Security documentation
-├── mcp-dev-assist-local/ # Custom MCP server
-└── CLOSEDOWN.md       # Session termination trigger
+main.gs (orchestration)
+  ├─ Handles onOpen() menu creation
+  ├─ Extracts presentation IDs from URLs
+  └─ Orchestrates formatting workflow
+
+config.gs (configuration management)
+  ├─ YAML configuration parsing
+  ├─ Font mapping definitions
+  └─ Toggle mode persistence
+
+formatter.gs (core formatting logic)
+  ├─ SlideFormatter class
+  ├─ Font discovery and mapping
+  ├─ Universal toggle logic (all fonts → target font)
+  └─ Batch processing coordination
+
+slides-api.gs (Google API client)
+  ├─ SlidesApiClient class
+  ├─ Retry logic with exponential backoff
+  ├─ Intelligent batching (max 50 operations)
+  └─ Element extraction (text, tables, shapes)
+
+ui.gs (user interface)
+  ├─ Progress dialog management
+  ├─ Error reporting with deep links
+  └─ Halt capability
+
+utils.gs (helpers)
+  ├─ Performance utilities
+  ├─ Toggle mode persistence
+  └─ Helper functions
+
+constants.gs (configuration)
+  ├─ OAuth scopes
+  ├─ Element type mappings
+  └─ Default configuration values
 ```
 
-### Configuration System
-- **Format**: YAML configuration files for designer-friendly editing
-- **Template Integration**: Reference Google Slides presentation for style extraction
-- **Validation**: JSON schema validation with comprehensive error reporting
+### Dual API Key Architecture
 
-### MCP Server Configuration
+The project uses **two separate API keys** for security isolation:
 
-The project includes an enhanced MCP server configuration that provides access to:
-- **Custom patched `@googleworkspace/mcp-dev-assist`**: Located in `mcp-dev-assist-local/`
-- **Fixed Search Functionality**: Switched from Discovery Engine to Custom Search API
-- **Google Workspace Card previews**: Working with API key `YOUR_GOOGLE_API_KEY_HERE`
-- **Up-to-date API reference materials**: Custom Search Engine ID `701ecba480bf443fa`
+1. **Development API Key** (`GOOGLE_API_KEY` in `.env`)
+   - Used by MCP server for documentation lookup
+   - Restricted to Custom Search API only
+   - Lower security risk (read-only documentation access)
 
-**Configuration**: Use local modified package via `npx tsx mcp-dev-assist-local/src/index.ts --stdio`
+2. **Deployment API Key** (`DEPLOYMENT_API_KEY` in `.env`)
+   - Used by deployment scripts for Apps Script operations
+   - Requires Drive, Slides, Sheets, Apps Script APIs
+   - Higher security risk (write access to Google Workspace)
 
-### Key Google Workspace APIs
+**Why separate keys?** Different scopes and risk profiles. If one key is compromised, the other remains secure.
 
-The project will primarily use:
-- **Apps Script API**: For managing script projects, deployments, and executions
-- **Google Slides API**: For reading and modifying presentation content, formatting, and objects
-  - Primary methods: `presentations.get`, `presentations.batchUpdate`, `presentations.pages.get`
-  - Batch operations: `updateTextStyle`, `updateShapeProperties`, `updateImageProperties`
-- **Google Sheets API**: For chart object formatting and data manipulation (Phase 2+)
+### OAuth Token Lifecycle
 
-### Authentication Requirements
-Required OAuth 2.0 scopes (configured in `config/apps-script-bundle.json`):
-- `https://www.googleapis.com/auth/presentations` - Read and modify presentations
-- `https://www.googleapis.com/auth/drive.readonly` - Access reference templates  
-- `https://www.googleapis.com/auth/spreadsheets` - Chart modifications (Phase 2+)
+```
+credentials.json (OAuth client config, user-provided)
+    ↓
+npm run auth (OAuth flow via browser)
+    ↓
+token.json (access + refresh tokens, auto-generated)
+    ↓
+Automatic refresh when access token expires (1 hour)
+    ↓
+Refresh token valid until revoked/expired (~6 months - 1 year)
+```
 
-**Deployment Authentication**: Requires OAuth 2.0 flow for Apps Script API with scopes:
-- `https://www.googleapis.com/auth/drive`
-- `https://www.googleapis.com/auth/script.projects`
-- `https://www.googleapis.com/auth/presentations`
-- `https://www.googleapis.com/auth/spreadsheets`
-- `https://www.googleapis.com/auth/logging.read` (for automated log retrieval)
+**Critical**: `credentials.json` must be **Web Application** type (not Desktop) to work with the deployment scripts.
 
-## Development Phases
+## Development Workflow
 
-The project follows a phased approach:
+### First-Time Setup (New Machine)
 
-1. **Phase 1**: Standalone Apps Script with hardcoded formatting rules
-2. **Phase 2**: Template-based formatting using reference Slides presentation
-3. **Phase 3**: Multi-component architecture with UI for feature selection
-4. **Phase 4**: Extended Google Sheets chart formatting capabilities
-5. **Phase 5**: External database for formatting specifications
-6. **Phase 6**: Google Cloud Platform integration for enterprise use
-
-## Testing Framework
-
-The project includes comprehensive testing specifications covering:
-- **Unit Tests**: Configuration parsing, API integration, formatting logic
-- **Integration Tests**: End-to-end presentation processing with all object types
-- **Performance Tests**: 50-slide presentations processed in <60 seconds
-- **User Acceptance Tests**: Real-world scenario validation
-
-### Test 1 - Font Swapping (Primary Test Case)
-- Target presentation: `https://docs.google.com/presentation/d/1_WxqIvBQ2ArGjUqamVhVYKdAie5YrEgXmmUFMgNNpPA/`
-- Requirements:
-  - Process all objects including notes pages
-  - Change "Comic Sans MS" fonts to "Arial"
-  - Change "Arial" fonts to "Comic Sans MS"
-- Expected: All font changes applied correctly with detailed success/error reporting
-
-### Additional Test Scenarios
-- **Comprehensive Object Types**: Multi-slide presentation with text, shapes, images, tables, charts
-- **Large Presentation Performance**: 50 slides with 20+ objects each
-- **Error Handling**: Permission errors, locked objects, API failures
-- **Template Integration**: Reference presentation + YAML configuration merging
-
-## Performance Requirements
-
-- Process presentations up to 50 slides
-- Handle slides with tens of objects each  
-- Complete processing in under 60 seconds
-- Memory usage: <100MB peak
-- Success rate: >95% of objects formatted correctly
-- API efficiency: Intelligent batching and rate limiting
-
-## Current Project Status
-
-**Apps Script Implementation: COMPLETED** ✅
-- All 7 core .gs files implemented and functional (located in `src/` directory)
-- Font swapping logic complete (Comic Sans MS ↔ Arial) with configurable YAML mappings
-- Google Slides API integration with retry logic and intelligent batching
-- Progress UI with halt capability and error reporting
-- Test presentation configured: `1_WxqIvBQ2ArGjUqamVhVYKdAie5YrEgXmmUFMgNNpPA`
-- **Enhanced font discovery logging deployed for debugging**
-- **Phase 1 implementation ready for testing**
-
-**Repository & Version Control: COMPLETED** ✅
-- **GitHub Repository**: https://github.com/spm1001/slider
-- **All commits**: Implementation, deployment system, and cleanup committed
-- **Git authentication**: Configured via GitHub CLI (user: spm1001)
-- **Remote origin**: Properly configured for clone/pull operations
-- **Ready for development**: Can be cloned to any machine with `git clone`
-
-**Automated Deployment System: COMPLETED** ✅
-- **Successful deployment**: Apps Script project deployed to Google account
-- **Project ID**: `1I2dUX4hBHie4JvxELe5Mog8PxHXRWLUDACYzw94NqMrQr-YGawsNsouu`
-- **Project URL**: https://script.google.com/d/1I2dUX4hBHie4JvxELe5Mog8PxHXRWLUDACYzw94NqMrQr-YGawsNsouu/edit
-- **OAuth 2.0 Flow**: Web application client working with manual auth code exchange
-- **Deployment script**: `deploy-web-manual.js` - proven functional deployment method
-- **MCP Server Enhancement**: Created patched `@googleworkspace/mcp-dev-assist` for efficient documentation access
-
-**PROJECT STATUS: SECURE DEVELOPMENT FOUNDATION WITH OPTIMIZATION OPPORTUNITIES** 🚀
-- ✅ Professional OAuth flow (resolves VSCode localhost conflicts)
-- ✅ Apps Script project successfully deployed and functional
-- ✅ Complete automated pipeline: `npm run auth` → `npm test` → programmatic log retrieval
-- ✅ Enhanced font discovery logging with full programmatic access
-- ✅ Font swapping functionality verified (Comic Sans MS ↔ Arial)
-- ✅ All 7 .gs files deployed with intelligent batching and error handling
-- ✅ Security hardened: Complete incident response, mechanical enforcement via pre-commit hooks
-- ✅ Session management: Structured workflow implemented for seamless session continuity
-- 🔧 Code quality insights: Architecture excellent, but identified verbosity issues (constants.gs: ~150 unused lines, formatter.gs: excessive logging)
-
-## Automated Development Workflow
-
-The project now features a complete automated development pipeline:
-
-### OAuth Authentication (`npm run auth`)
-**Professional OAuth 2.0 flow designed for VSCode Remote SSH environments:**
-- **Background server**: Runs OAuth server without blocking terminal
-- **Concurrent monitoring**: Real-time progress updates every 15 seconds
-- **VSCode compatibility**: Resolves localhost blocking issues in Remote SSH
-- **Modern security**: Uses WHATWG URL API, eliminates deprecated warnings
-- **Clean exit**: Proper process management and cleanup
-
-**Implementation files:**
-- `auth-with-monitoring.js` - Main OAuth coordinator with progress monitoring
-- `oauth-background.js` - Background OAuth server with status tracking
-- `audit-oauth-scopes.js` - Security audit tool for scope validation
-
-### Testing & Deployment (`npm test`)
-**Complete automated pipeline:**
-1. **Execute test function** (`testFontSwap`) on remote Apps Script project
-2. **Retrieve detailed execution logs** via Cloud Logging API
-3. **Display font discovery results** with element-level analysis
-4. **Report font changes and errors** with actionable feedback
-
-**Log retrieval features:**
-- **20+ log entries** retrieved programmatically from each execution
-- **Element-level font detection**: "Element g3646b023612_0_0 fonts: [Comic Sans MS]" 
-- **Font change tracking**: "Font change: Comic Sans MS → Arial in element g3646b023612_0_0"
-- **Execution intelligence**: Batch processing, error counts, completion status
-
-### Standalone Log Access (`npm run logs`)
-**Dedicated log retrieval** for detailed debugging and analysis
-
-### Development Commands Summary
 ```bash
-npm run auth      # Professional OAuth (background monitoring)
-npm test          # Deploy → Execute → Retrieve logs (complete pipeline)
-npm run logs      # Standalone detailed log retrieval  
-npm run deploy    # Manual deployment only
+# 1. Clone and install
+git clone https://github.com/spm1001/slider.git
+cd slider
+npm install
+
+# 2. Configure environment (MANDATORY)
+cp .env.template .env
+# Edit .env and add:
+#   - GOOGLE_API_KEY (development key)
+#   - DEPLOYMENT_API_KEY (deployment key)
+
+# 3. Add OAuth credentials
+# Place credentials.json in project root (Web Application type)
+
+# 4. Enable user-level Apps Script API (CRITICAL)
+# Visit: https://script.google.com/home/usersettings
+# Toggle ON: "Google Apps Script API"
+
+# 5. Authenticate and deploy
+npm run auth    # OAuth flow (creates token.json)
+npm run deploy  # Deploy .gs files to Apps Script project
 ```
 
-## Machine Transfer & Development Setup
+### Regular Development Workflow
 
-### Quick Setup for New Machines
+```bash
+# Edit .gs files locally
+vim src/formatter.gs
 
-**Essential files for machine transfer:**
-1. **Clone repository**: `git clone https://github.com/spm1001/slider.git`
-2. **Install dependencies**: `npm install`
-3. **Environment setup**: `cp .env.template .env` and configure API keys
-4. **OAuth credentials**: Place `credentials.json` in project root
-5. **Deployment**: `npm run deploy` (uses GitHub Secrets if available)
+# Deploy changes
+npm run deploy
 
-**Development workflow with session persistence:**
-1. **Start tmux session**: `tmux new-session -s claude-work`
-2. **Navigate to project**: `cd /home/modha/slider` 
-3. **Start Claude**: `claude --resume`
-4. **For SSH disconnections**: Reconnect and `tmux attach -s claude-work`
+# Test and view logs
+npm test        # Runs testFontSwap() and retrieves logs
+npm run logs    # Standalone log retrieval
+```
 
-**Key documentation for new machines:**
-- `docs/MACHINE_TRANSFER.md` - Detailed transfer procedures
-- `docs/SECURITY_ALERT.md` - Security requirements and procedures
-- `README.md` - Complete setup and usage guide
-- `CLOSEDOWN.md` - Session termination procedures
+### Security Workflow
 
-## Learning and Knowledge Transfer
+```bash
+# Before ANY commit
+npm run security:check
 
-### Learning Documentation Preference
-**IMPORTANT**: The user prefers a Socratic approach to learning and technical explanation:
+# Verify:
+# - No API keys in files
+# - All secrets in environment variables
+# - Documentation uses placeholders only
+```
 
-- **Always explain "how" and "why"** when performing technical operations
-- **Record learning experiences** in `LEARNING_LOG.md` (append, never overwrite)
-- **Structure explanations** with:
-  - The original question or curiosity
-  - Step-by-step breakdown of concepts
-  - Underlying principles and deeper insights
-  - Technical concepts learned
-- **Use Socratic method**: Build understanding through questions and guided discovery
-- **Connect new concepts** to previously learned material in the log
+### Git Identity (CRITICAL)
 
-When teaching new technical concepts, always append to `LEARNING_LOG.md` following the established format.
-
-## Git Identity and Privacy
-
-### **CRITICAL: Git Identity Configuration**
-**ALWAYS use GitHub noreply identity for all commits:**
+**ALWAYS use GitHub noreply identity:**
 ```bash
 git config --global user.name "spm1001"
 git config --global user.email "spm1001@users.noreply.github.com"
 ```
 
-**NEVER commit with machine-specific identities** (e.g., `modha@kube.lan`) - these expose private information.
+**NEVER commit with machine-specific identities** (e.g., `modha@kube.lan`).
 
-**If identity exposure occurs:**
-1. Immediately rewrite git history using `git filter-branch`
-2. Force push corrected history to remote
-3. Update all machine git configurations
-4. Document procedures to prevent recurrence
+## Key Development Commands
 
-## Security Infrastructure and Procedures
-
-### Critical Security Status
-**🔒 SECURITY POSTURE: HARDENED** - This project has implemented comprehensive security measures following a critical incident response.
-
-### Implemented Security Measures
-
-**Secrets Management System**:
-- ✅ Environment variable architecture (.env.template system)
-- ✅ Comprehensive .gitignore excluding all secret file patterns
-- ✅ Git history cleaned of all exposed credentials
-- ✅ Documentation uses placeholder values only
-
-**Automated Security Validation**:
-- ✅ Pre-commit hooks for secret detection
-- ✅ Automated security scanning (`npm run security:check`)
-- ✅ Git pre-commit validation preventing secret commits
-- ✅ Multiple detection layers (pattern matching, file scanning, documentation review)
-
-**Security Documentation**:
-- ✅ Complete incident response procedures (`secrets/incident-response.md`)
-- ✅ Detailed setup guides (`secrets/setup-guide.md`, `secrets/README.md`)
-- ✅ Security requirements integrated into SPECIFICATION.md
-- ✅ Global security preferences in ~/.claude/CLAUDE.md
-
-**Emergency Response Capability**:
-- ✅ Proven incident response procedures (successfully cleaned exposed API key)
-- ✅ Git history rewriting capabilities
-- ✅ Rapid credential revocation and replacement processes
-- ✅ Comprehensive monitoring and detection systems
-
-### Security Commands and Tools
-
-**Daily Security Operations**:
 ```bash
-npm run security:check     # Run comprehensive security validation
-npm run security:setup     # Install and configure security tools
-./scripts/security-check.sh # Direct security validation script
-pre-commit run --all       # Run all pre-commit security hooks
+# OAuth and deployment
+npm run auth      # Professional OAuth with background monitoring
+npm run deploy    # Deploy .gs files to Apps Script project
+
+# Testing
+npm test          # Deploy → Execute testFontSwap() → Retrieve logs
+npm run logs      # Standalone log retrieval for debugging
+
+# Security
+npm run security:check   # Comprehensive security validation
+npm run security:setup   # Install pre-commit hooks
+
+# Utilities
+npm run benchmark        # Performance benchmarking
+npm run clean           # Remove token.json (force re-auth)
 ```
 
-**Emergency Response**:
-```bash
-# IF SECRETS ARE EXPOSED:
-# 1. STOP all work immediately
-# 2. Revoke credentials at source (Google Cloud Console)
-# 3. Follow procedures in secrets/incident-response.md
-# 4. Run git history cleaning
-# 5. Force push cleaned history
-# 6. Generate new credentials
+## Configuration System
+
+### Font Mapping Configuration
+
+Located in `config.gs`, editable via YAML:
+
+```yaml
+fontMappings:
+  - "Comic Sans MS": "Arial"
+  - "Arial": "Comic Sans MS"
+
+processNotes: true
+skipErrors: true
+batchSize: 50
+apiRetries: 3
+apiRetryDelay: 1000
 ```
 
-### Security Validation Requirements
+### Universal Toggle Mode
 
-**Before ANY commit**:
-- [ ] Run `npm run security:check` and ensure it passes
-- [ ] Verify no real API keys, passwords, or tokens in any files
-- [ ] Confirm all secrets are in environment variables
-- [ ] Check documentation uses placeholder values only
+The system supports **universal font toggling** - all fonts → single target font:
 
-**Before ANY deployment**:
-- [ ] Validate .env file contains all required variables
-- [ ] Test credentials in secure environment
-- [ ] Verify API key restrictions are properly configured
-- [ ] Confirm OAuth scopes are minimal and appropriate
-
-### Lessons Learned from Security Incident
-
-**Root Cause**: API key hardcoded in documentation and configuration files, then committed to public repository.
-
-**Prevention Measures Implemented**:
-1. **Global Security Culture**: Updated ~/.claude/CLAUDE.md with mandatory security practices
-2. **Design-Time Security**: Added comprehensive security requirements to SPECIFICATION.md
-3. **Automated Prevention**: Implemented pre-commit hooks and security scanning
-4. **Repository Defaults**: Default to private repositories, security review before public
-5. **Response Capability**: Proven procedures for rapid incident response
-
-**Key Insights**:
-- Security must be designed in from day one, not added later
-- Multiple layers of prevention are essential (one layer will eventually fail)
-- Rapid response capabilities are critical for minimizing exposure impact
-- Documentation and training are as important as technical controls
-
-### Ongoing Security Maintenance
-
-**Monthly Tasks**:
-- Review repository for accidentally committed secrets
-- Validate all security tools are working correctly
-- Update security documentation as needed
-
-**Quarterly Tasks**:
-- Rotate API keys and credentials
-- Review and update security procedures
-- Test incident response procedures
-
-**Project Security Contacts**:
-- Primary: Project owner (immediate credential revocation authority)
-- Escalation: [To be defined based on organization]
-
-When teaching new technical concepts, always append to `LEARNING_LOG.md` following the established format.
-
-## Implementation Notes
-
-### User Interface Requirements
-- Simple "working" progress indicator without percentage completion
-- Graceful halt execution capability
-- Error reporting with hyperlinked deep links to specific slides
-- URL format: `https://docs.google.com/presentation/d/{presentationId}/edit#slide=id.{slideId}`
-
-### Chart Strategy Decision
-- **Phase 1**: Local chart modification (simpler implementation, immediate results)
-- **Phase 2+**: Optional remote chart modification (persistent changes, requires additional permissions)
-
-### Error Handling Approach
-- Skip failed objects and continue processing
-- Provide detailed error list for manual resolution
-- Maintain graceful degradation for partial completion
-
-## Git Workflow & Repository Management
-
-### Repository Structure
-- **GitHub Repository**: https://github.com/spm1001/slider
-- **Local Repository**: `/home/modha/slider/` (SSH environment)
-- **Git Authentication**: GitHub CLI with token (`gho_****` with repo permissions)
-- **Remote Configuration**: `origin` → `https://github.com/spm1001/slider.git`
-
-### Git Concepts for Development
-- **Multiple Remotes**: Can add additional remotes for backups, forks, or deployment targets
-- **Remote Naming**: `origin` is convention (not special meaning) - other remotes can be `upstream`, `backup`, `staging`, etc.
-- **Branch Tracking**: Local `main` branch tracks `origin/main` for synchronization
-- **Security**: `credentials.json` excluded from commits (contains sensitive OAuth data)
-
-### Clone Instructions for Local Development
-```bash
-git clone https://github.com/spm1001/slider.git
-cd slider
-npm install
-# Add your credentials.json file (web application OAuth 2.0 client)
-npm run deploy  # Uses deploy-web-manual.js
+```javascript
+// First run: All fonts → Comic Sans MS
+// Second run: All fonts → Arial
+// Third run: All fonts → Comic Sans MS
+// ... (toggles each run)
 ```
 
-### Deployment Instructions
-1. **Create OAuth 2.0 Credentials**: Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials?project=mit-dev-362409) and create a "Web application" OAuth 2.0 client
-2. **Download credentials.json**: Save the downloaded JSON file as `credentials.json` in the project root
-3. **Run deployment**: Execute `npm run deploy` and follow the browser OAuth flow
-4. **Complete authorization**: Copy the authorization code from the failed localhost redirect URL
-5. **Project deployed**: The script will create/update your Apps Script project
+Toggle mode persists per-presentation in PropertiesService.
 
-## Key Documentation Links
+## Testing
 
-- **Repository**: https://github.com/spm1001/slider
-- Apps Script API concepts: https://developers.google.com/apps-script/api/concepts
-- Google Slides API: https://developers.google.com/workspace/slides/api/guides/overview  
-- Google Workspace Add-ons: https://developers.google.com/workspace/add-ons/editors/gsao
+### Primary Test Case
+
+**Test Presentation**: `1_WxqIvBQ2ArGjUqamVhVYKdAie5YrEgXmmUFMgNNpPA`
+
+**Test Function**: `testFontSwap()` in `main.gs`
+
+**Expected Behavior**:
+- Swap Comic Sans MS ↔ Arial
+- Process all slides including notes pages
+- Complete in <60 seconds
+- Success rate >95%
+- Detailed logs via `npm test`
+
+### Running Tests
+
+```bash
+# Automated testing with log retrieval
+npm test
+
+# Manual testing
+# 1. Open Apps Script project
+# 2. Run testFontSwap() function
+# 3. View execution logs
+```
+
+## Common Development Tasks
+
+### Modifying Font Swapping Logic
+
+1. Edit `src/formatter.gs` (SlideFormatter class)
+2. Update font mappings in `src/config.gs`
+3. Deploy: `npm run deploy`
+4. Test: `npm test`
+
+### Adding New Formatting Rules
+
+1. Add configuration to `src/config.gs`
+2. Implement logic in `src/formatter.gs`
+3. Update API calls in `src/slides-api.gs` if needed
+4. Test with `npm test`
+
+### Debugging Failed Deployments
+
+```bash
+# Check API enablement
+# Visit: https://console.cloud.google.com/apis/dashboard
+# Required: Drive, Slides, Sheets, Apps Script APIs
+
+# Check user-level Apps Script API
+# Visit: https://script.google.com/home/usersettings
+# Must be enabled
+
+# Verify environment variables
+cat .env
+# Must contain GOOGLE_API_KEY and DEPLOYMENT_API_KEY
+
+# Re-authenticate
+npm run clean
+npm run auth
+npm run deploy
+```
+
+### Reading Execution Logs
+
+```bash
+# Automated log retrieval (20+ entries)
+npm run logs
+
+# View in Apps Script editor
+# Open project → Executions → View execution details
+```
+
+## Security Requirements
+
+### Pre-Commit Checklist
+
+Before ANY commit:
+- [ ] Run `npm run security:check` (must pass)
+- [ ] Verify no API keys in code/configs
+- [ ] Confirm all secrets in `.env`
+- [ ] Check documentation uses placeholders
+
+### Files That Must NEVER Be Committed
+
+```
+.env                    # Environment variables with real keys
+credentials.json        # OAuth client configuration
+token.json             # OAuth tokens
+*.secret*              # Any file with "secret" in name
+*key*                  # Files with "key" in name (with exceptions)
+```
+
+### If Secrets Are Exposed
+
+**STOP all work immediately:**
+1. Revoke credentials at Google Cloud Console
+2. Follow `secrets/incident-response.md` procedures
+3. Clean git history with filter-branch
+4. Force push cleaned history
+5. Generate new credentials
+6. Document lessons learned
+
+## MCP Server Configuration
+
+**Custom Patched MCP Server**: `mcp-dev-assist-local/`
+
+**Purpose**: Efficient access to Google Workspace API documentation
+
+**Configuration**:
+- Uses Custom Search API (not Discovery Engine)
+- Requires `GOOGLE_API_KEY` in `.env`
+- Search Engine ID: `701ecba480bf443fa`
+
+**Usage**: Automatically configured in Claude Code workspace settings
+
+## Key Technical Concepts
+
+### Batch Processing
+
+Apps Script API has strict quotas. Use batching:
+- Max 50 operations per `batchUpdate` call
+- Intelligent batching in `slides-api.gs`
+- Retry logic with exponential backoff
+
+### Font Discovery
+
+Two approaches:
+1. **Explicit mappings**: Define specific font pairs in config
+2. **Universal toggle**: Discover all fonts → swap to single target
+
+### Error Handling
+
+**Philosophy**: Skip failed objects, continue processing
+- Collect errors for final report
+- Provide deep links to problematic slides
+- Graceful degradation for partial completion
+
+### Deep Links to Slides
+
+Format: `https://docs.google.com/presentation/d/{presentationId}/edit#slide=id.{slideId}`
+
+Generated automatically in error reports for quick navigation.
+
+## Project Files Reference
+
+### Documentation
+- `README.md` - Setup and deployment instructions
+- `SPECIFICATION.md` - Comprehensive technical specification
+- `docs/MACHINE_TRANSFER.md` - New machine setup guide
+- `secrets/` - Security procedures and incident response
+
+### Deployment
+- `deploy-web-manual.js` - Main deployment script (OAuth + Drive API)
+- `auth-with-monitoring.js` - Professional OAuth flow
+- `oauth-background.js` - Background OAuth server
+
+### Testing
+- `intelligent-log-retrieval.js` - Automated test execution and log retrieval
+- `get-logs-programmatically.js` - Standalone log access
+- `benchmark-toggle-loop.js` - Performance testing
+
+### Security
+- `scripts/security-check.sh` - Secret scanning
+- `scripts/setup-security.sh` - Pre-commit hook installation
+- `.env.template` - Environment variable template
+
+## Repository Information
+
+- **GitHub**: https://github.com/spm1001/slider
+- **Apps Script Project**: `1I2dUX4hBHie4JvxELe5Mog8PxHXRWLUDACYzw94NqMrQr-YGawsNsouu`
+- **Google Cloud Project**: `mit-dev-362409`
+- **Test Presentation**: `1_WxqIvBQ2ArGjUqamVhVYKdAie5YrEgXmmUFMgNNpPA`
+
+## Performance Requirements
+
+- Process presentations up to 50 slides
+- Handle 20+ objects per slide
+- Complete processing in <60 seconds
+- Memory usage <100MB peak
+- Success rate >95%
+- API efficiency via intelligent batching
+
+## Learning Documentation
+
+The user prefers **Socratic learning** - explain "how" and "why" when performing technical operations.
+
+**When teaching new concepts**:
+- Record in `LEARNING_LOG.md` (append, never overwrite)
+- Structure: Question → Breakdown → Principles → Concepts
+- Use Socratic method - guided discovery
+- Connect to previous learning
