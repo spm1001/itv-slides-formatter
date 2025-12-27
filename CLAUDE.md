@@ -161,7 +161,7 @@ scripts/            # Security check scripts
 
 - **GitHub**: https://github.com/spm1001/slider
 - **Apps Script Project**: `1FDkshN59SqLSNzORh2VVoE0_PIZ5_Sqv3Dq7krtwvIL4nV_lI3LrJlin`
-- **GCP Project**: `mit-dev-362409`
+- **GCP Project**: `itv-mit-slides-formatter`
 - **Test Presentation**: `1_WxqIvBQ2ArGjUqamVhVYKdAie5YrEgXmmUFMgNNpPA`
 
 ## Known Issues
@@ -170,8 +170,6 @@ scripts/            # Security check scripts
 
 `itv-appscript run` fails with permission denied. This requires:
 1. Correct GCP project association (done)
-2. OAuth credentials from the same GCP project (currently using mit-workspace-mcp-server credentials)
+2. OAuth credentials from the same GCP project
 
-**Workaround**: Run tests manually in Apps Script editor, use `itv-appscript logs` to view output.
-
-**Future fix**: Switch to OAuth credentials from mit-dev-362409.
+All three now work with credentials from `itv-mit-slides-formatter`.
