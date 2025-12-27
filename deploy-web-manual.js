@@ -1,35 +1,31 @@
 #!/usr/bin/env node
 
+/**
+ * Apps Script Deployment Tool
+ *
+ * Uses itv-auth CLI for authentication. Run `npm run auth` first to create token.json.
+ */
+
 const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
-const readline = require('readline');
+const { getAuthClient } = require('./lib/auth');
 
-class AppsScriptWebManualDeployer {
+class AppsScriptDeployer {
   constructor() {
     this.auth = null;
     this.drive = null;
     this.scriptsFolder = __dirname;
     this.projectName = 'Slide Formatter';
-    this.redirectUri = 'http://localhost:3000/oauth/callback';
-    this.requiredScopes = [
-      'https://www.googleapis.com/auth/drive',
-      'https://www.googleapis.com/auth/drive.scripts',
-      'https://www.googleapis.com/auth/script.projects',
-      'https://www.googleapis.com/auth/presentations',
-      'https://www.googleapis.com/auth/spreadsheets',
-      'https://www.googleapis.com/auth/logging.read'
-    ];
-    
+
     // Load environment variables
     this.loadEnvVars();
   }
 
   loadEnvVars() {
-    // Load deployment API key from environment
     require('dotenv').config();
     this.deploymentApiKey = process.env.DEPLOYMENT_API_KEY;
-    
+
     if (!this.deploymentApiKey) {
       console.warn('⚠️  DEPLOYMENT_API_KEY not found in environment variables');
       console.warn('   Add DEPLOYMENT_API_KEY=your_key_here to .env file');
@@ -38,180 +34,46 @@ class AppsScriptWebManualDeployer {
     }
   }
 
-  async initializeDriveAPI() {
-    // Initialize Drive API with both OAuth and API key
-    const driveConfig = { 
-      version: 'v2', 
-      auth: this.auth 
-    };
-    
-    // Add API key if available
+  async initializeAPIs() {
+    const driveConfig = { version: 'v2', auth: this.auth };
     if (this.deploymentApiKey) {
       driveConfig.key = this.deploymentApiKey;
       console.log('🔑 Using deployment API key for enhanced authentication');
     }
-    
     this.drive = google.drive(driveConfig);
-    
-    // Also initialize Apps Script API for project updates
-    const scriptConfig = { 
-      version: 'v1', 
-      auth: this.auth 
-    };
-    
+
+    const scriptConfig = { version: 'v1', auth: this.auth };
     if (this.deploymentApiKey) {
       scriptConfig.key = this.deploymentApiKey;
     }
-    
     this.script = google.script(scriptConfig);
-    console.log('🔧 Apps Script API initialized');
+    console.log('🔧 APIs initialized (Drive v2, Script v1)');
   }
 
   async authenticate() {
-    console.log('🔐 Authenticating with Google APIs (Web Manual Code)...');
-    
-    // Load credentials
-    const credentials = await this.loadCredentials();
-    const { client_id, client_secret } = credentials.web || credentials.installed;
-    
-    this.auth = new google.auth.OAuth2(
-      client_id, 
-      client_secret, 
-      this.redirectUri
-    );
-    
-    // Check for existing token
+    console.log('🔐 Authenticating with Google APIs...');
+
+    this.auth = getAuthClient();
+    console.log('✅ Using token from token.json');
+
+    await this.initializeAPIs();
+
+    // Validate token by making a test API call
     try {
-      const token = await this.loadToken();
-      this.auth.setCredentials(token);
-      console.log('✅ Using existing authentication token');
-      
-      // Test if token is still valid and initialize Drive API
-      await this.initializeDriveAPI();
       await this.drive.about.get();
       console.log('✅ Token is valid');
-      
     } catch (error) {
-      console.log('🔄 No valid token found or token expired, getting new authorization...');
-      await this.getManualAuthCode();
+      if (error.code === 401) {
+        throw new Error(`
+❌ Token expired and could not refresh
+
+Re-authenticate:
+  rm token.json
+  npm run auth
+`);
+      }
+      throw error;
     }
-  }
-
-  async loadCredentials() {
-    const credentialsPath = path.join(this.scriptsFolder, 'credentials.json');
-    if (!fs.existsSync(credentialsPath)) {
-      throw new Error(`
-❌ Credentials file not found: ${credentialsPath}
-Please ensure your credentials.json file is in the project directory.
-      `);
-    }
-    
-    return JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-  }
-
-  async loadToken() {
-    const tokenPath = path.join(this.scriptsFolder, 'token.json');
-    
-    // Try GitHub Secrets first (for machine portability)
-    if (process.env.OAUTH_REFRESH_TOKEN) {
-      console.log('🔑 Using OAuth token from environment variables');
-      return {
-        refresh_token: process.env.OAUTH_REFRESH_TOKEN,
-        access_token: process.env.OAUTH_ACCESS_TOKEN || null,
-        scope: "https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.scripts https://www.googleapis.com/auth/script.projects",
-        token_type: "Bearer",
-        expiry_date: process.env.OAUTH_EXPIRY_DATE || Date.now() - 1000 // Force refresh if no expiry
-      };
-    }
-    
-    // Fall back to local token.json file
-    if (!fs.existsSync(tokenPath)) {
-      throw new Error('Token file not found and no OAUTH_REFRESH_TOKEN environment variable provided');
-    }
-    
-    console.log('🔑 Using OAuth token from local file');
-    return JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
-  }
-
-  async getManualAuthCode() {
-    // Generate auth URL for manual authorization
-    const authUrl = this.auth.generateAuthUrl({
-      access_type: 'offline',
-      scope: this.requiredScopes,
-      prompt: 'consent'  // Force consent screen to ensure we get refresh token
-    });
-
-    console.log('');
-    console.log('🌐 AUTHORIZATION REQUIRED');
-    console.log('========================');
-    console.log('');
-    console.log('1. Copy this URL and open it in your browser:');
-    console.log('');
-    console.log(authUrl);
-    console.log('');
-    console.log('2. Sign in with your Google account');
-    console.log('3. Grant the requested permissions');
-    console.log('4. You will be redirected to localhost:3000 (which will fail - that\'s OK!)');
-    console.log('5. Copy the "code" parameter from the failed URL');
-    console.log('   Example: http://localhost:3000/oauth/callback?code=4/XXXXX&scope=...');
-    console.log('   Copy just the XXXXX part after "code="');
-    console.log('6. Paste the code below when prompted');
-    console.log('');
-
-    // Save URL to file for easy access
-    const urlContent = `OAuth Authorization URL (Web Application):
-
-Copy this entire URL and open in your browser:
-──────────────────────────────────────────────────
-${authUrl}
-──────────────────────────────────────────────────
-
-Instructions for SSH users:
-1. Open the URL above in your browser (on your laptop)
-2. Sign in and grant permissions  
-3. You will be redirected to localhost:3000 (which will fail - that's OK!)
-4. Copy the "code" parameter from the failed URL
-   Example URL: http://localhost:3000/oauth/callback?code=4/XXXXX&scope=...
-   Copy just the XXXXX part after "code="
-5. Return to the terminal and paste the code when prompted
-
-✅ Using proper Web application OAuth client
-💡 This method works perfectly for SSH/remote development`;
-
-    fs.writeFileSync(path.join(this.scriptsFolder, 'oauth-url.txt'), urlContent);
-    console.log('💾 URL and instructions saved to: oauth-url.txt');
-    console.log('');
-
-    // Prompt for authorization code
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
-
-    return new Promise((resolve, reject) => {
-      rl.question('📋 Paste the authorization code here: ', async (code) => {
-        rl.close();
-        
-        try {
-          console.log('🔄 Exchanging authorization code for access token...');
-          const { tokens } = await this.auth.getToken(code.trim());
-          this.auth.setCredentials(tokens);
-          
-          // Save token for future use
-          const tokenPath = path.join(this.scriptsFolder, 'token.json');
-          fs.writeFileSync(tokenPath, JSON.stringify(tokens, null, 2));
-          console.log('💾 Token saved for future use');
-          
-          // Initialize Drive API
-          await this.initializeDriveAPI();
-          console.log('✅ Authentication successful');
-          
-          resolve(tokens);
-        } catch (error) {
-          reject(new Error(`Authentication failed: ${error.message}`));
-        }
-      });
-    });
   }
 
   async loadProjectFiles() {
@@ -489,8 +351,8 @@ Instructions for SSH users:
 
 // Main execution
 async function main() {
-  const deployer = new AppsScriptWebManualDeployer();
-  
+  const deployer = new AppsScriptDeployer();
+
   try {
     console.log('🔧 Required APIs (ensure these are enabled):');
     console.log('  • Google Drive API');
@@ -499,7 +361,7 @@ async function main() {
     console.log('  • Apps Script API');
     console.log('🌐 Enable at: https://console.cloud.google.com/apis/dashboard');
     console.log('');
-    
+
     await deployer.deployProject();
   } catch (error) {
     console.error('\n💥 Fatal error:', error.message);
@@ -507,9 +369,8 @@ async function main() {
   }
 }
 
-// Command line usage
 if (require.main === module) {
   main();
 }
 
-module.exports = AppsScriptWebManualDeployer;
+module.exports = AppsScriptDeployer;

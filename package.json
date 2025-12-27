@@ -4,8 +4,8 @@
   "description": "Automated deployment tool for Google Apps Script Slide Formatter project",
   "main": "deploy-web-manual.js",
   "scripts": {
-    "auth": "itv-auth --scopes drive script.projects slides sheets logging.read",
-    "auth:manual": "itv-auth --manual --scopes drive script.projects slides sheets logging.read",
+    "auth": "itv-auth -s drive -s script.projects -s slides -s sheets -s logging.read",
+    "auth:manual": "itv-auth --manual -s drive -s script.projects -s slides -s sheets -s logging.read",
     "deploy": "node deploy-web-manual.js",
     "test": "node intelligent-log-retrieval.js",
     "benchmark": "node benchmark-toggle-loop.js",

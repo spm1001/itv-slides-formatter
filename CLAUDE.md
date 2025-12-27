@@ -86,21 +86,28 @@ The project uses **two separate API keys** for security isolation:
 
 **Why separate keys?** Different scopes and risk profiles. If one key is compromised, the other remains secure.
 
-### OAuth Token Lifecycle
+### Authentication via itv-auth CLI
 
-```
-credentials.json (OAuth client config, user-provided)
-    ↓
-npm run auth (OAuth flow via browser)
-    ↓
-token.json (access + refresh tokens, auto-generated)
-    ↓
-Automatic refresh when access token expires (1 hour)
-    ↓
-Refresh token valid until revoked/expired (~6 months - 1 year)
+Authentication uses the shared `itv-auth` CLI from `itv-google-auth` library:
+
+```bash
+npm run auth          # Auto mode (opens browser)
+npm run auth:manual   # Manual mode (for SSH/remote)
 ```
 
-**Critical**: `credentials.json` must be **Web Application** type (not Desktop) to work with the deployment scripts.
+The CLI:
+1. Reads `credentials.json` (OAuth client config)
+2. Runs the OAuth flow
+3. Saves `token.json` with embedded `client_id` and `client_secret`
+
+Node.js scripts then just read `token.json` - no need for `credentials.json`.
+
+**Token Lifecycle:**
+- Access token expires in 1 hour (auto-refreshed)
+- Refresh token valid ~6 months to 1 year
+- Scripts auto-save refreshed tokens to `token.json`
+
+**Critical**: `credentials.json` must be **Web Application** type (not Desktop).
 
 ## Development Workflow
 
@@ -112,21 +119,25 @@ git clone https://github.com/spm1001/slider.git
 cd slider
 npm install
 
-# 2. Configure environment (MANDATORY)
+# 2. Install itv-auth CLI (if not already installed)
+pipx install ~/Repos/itv-google-auth
+
+# 3. Configure environment (MANDATORY)
 cp .env.template .env
 # Edit .env and add:
 #   - GOOGLE_API_KEY (development key)
 #   - DEPLOYMENT_API_KEY (deployment key)
 
-# 3. Add OAuth credentials
+# 4. Add OAuth credentials
 # Place credentials.json in project root (Web Application type)
+# Download from: https://console.cloud.google.com/apis/credentials
 
-# 4. Enable user-level Apps Script API (CRITICAL)
+# 5. Enable user-level Apps Script API (CRITICAL)
 # Visit: https://script.google.com/home/usersettings
 # Toggle ON: "Google Apps Script API"
 
-# 5. Authenticate and deploy
-npm run auth    # OAuth flow (creates token.json)
+# 6. Authenticate and deploy
+npm run auth    # OAuth flow via itv-auth (creates token.json)
 npm run deploy  # Deploy .gs files to Apps Script project
 ```
 
@@ -169,13 +180,16 @@ git config --global user.email "spm1001@users.noreply.github.com"
 ## Key Development Commands
 
 ```bash
-# OAuth and deployment
-npm run auth      # Professional OAuth with background monitoring
-npm run deploy    # Deploy .gs files to Apps Script project
+# Authentication (via itv-auth CLI)
+npm run auth         # OAuth flow (auto mode, opens browser)
+npm run auth:manual  # OAuth flow (manual mode, for SSH/remote)
+
+# Deployment
+npm run deploy       # Deploy .gs files to Apps Script project
 
 # Testing
-npm test          # Deploy → Execute testFontSwap() → Retrieve logs
-npm run logs      # Standalone log retrieval for debugging
+npm test             # Execute testFontSwap() → Retrieve logs
+npm run logs         # Standalone log retrieval for debugging
 
 # Security
 npm run security:check   # Comprehensive security validation
@@ -183,7 +197,7 @@ npm run security:setup   # Install pre-commit hooks
 
 # Utilities
 npm run benchmark        # Performance benchmarking
-npm run clean           # Remove token.json (force re-auth)
+npm run clean            # Remove token.json (force re-auth)
 ```
 
 ## Configuration System
@@ -273,10 +287,13 @@ npm test
 
 # Verify environment variables
 cat .env
-# Must contain GOOGLE_API_KEY and DEPLOYMENT_API_KEY
+# Must contain DEPLOYMENT_API_KEY (GOOGLE_API_KEY optional for MCP)
+
+# Check credentials.json exists (needed for itv-auth)
+ls -la credentials.json
 
 # Re-authenticate
-npm run clean
+rm token.json
 npm run auth
 npm run deploy
 ```

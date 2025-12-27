@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
+/**
+ * Apps Script Test Runner & Log Retriever
+ *
+ * Uses itv-auth CLI for authentication. Run `npm run auth` first to create token.json.
+ */
+
 const { google } = require('googleapis');
+const { getAuthClient } = require('./lib/auth');
 
 class AppsScriptTestRunner {
   constructor() {
@@ -10,8 +15,7 @@ class AppsScriptTestRunner {
     this.script = null;
     this.projectId = '1I2dUX4hBHie4JvxELe5Mog8PxHXRWLUDACYzw94NqMrQr-YGawsNsouu';
     this.testFunction = 'testFontSwap';
-    
-    // Load environment variables
+
     require('dotenv').config();
     this.deploymentApiKey = process.env.DEPLOYMENT_API_KEY;
   }
@@ -19,38 +23,13 @@ class AppsScriptTestRunner {
   async initialize() {
     console.log('🚀 Apps Script Test Runner & Log Retriever');
     console.log('==========================================');
-    
-    // Load credentials
-    const credentialsPath = path.join(__dirname, 'credentials.json');
-    const tokenPath = path.join(__dirname, 'token.json');
-    
-    if (!fs.existsSync(credentialsPath)) {
-      throw new Error('credentials.json not found');
-    }
-    
-    const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-    
-    // Set up OAuth client
-    this.auth = new google.auth.OAuth2(
-      credentials.web.client_id,
-      credentials.web.client_secret,
-      credentials.web.redirect_uris[0]
-    );
-    
-    // Load token
-    if (fs.existsSync(tokenPath)) {
-      const token = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
-      this.auth.setCredentials(token);
-    } else {
-      throw new Error('No token.json found. Run npm run deploy first.');
-    }
-    
-    // Initialize Apps Script API client
+
+    this.auth = getAuthClient();
+
+    // Initialize API clients
     this.script = google.script({ version: 'v1', auth: this.auth });
-    
-    // Initialize Cloud Logging API client
     this.logging = google.logging({ version: 'v2', auth: this.auth });
-    
+
     console.log('✅ Authentication initialized');
   }
 

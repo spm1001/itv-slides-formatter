@@ -1,41 +1,32 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
+/**
+ * Apps Script Log Reader
+ *
+ * Uses itv-auth CLI for authentication. Run `npm run auth` first to create token.json.
+ */
+
 const { google } = require('googleapis');
+const { getAuthClient } = require('./lib/auth');
 
 class AppsScriptLogReader {
   constructor() {
     this.auth = null;
     this.logging = null;
     this.projectId = process.env.GOOGLE_CLOUD_PROJECT_ID || 'mit-dev-362409';
-    
-    // Load environment variables
+
     require('dotenv').config();
   }
 
   async initialize() {
-    console.log('🔍 Apps Script Log Reader - SOLUTION FOUND!');
-    console.log('============================================');
-    
-    // Load credentials and token
-    const credentialsPath = path.join(__dirname, 'credentials.json');
-    const tokenPath = path.join(__dirname, 'token.json');
-    
-    const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-    const token = JSON.parse(fs.readFileSync(tokenPath, 'utf8'));
-    
-    // Set up OAuth client
-    this.auth = new google.auth.OAuth2(
-      credentials.web.client_id,
-      credentials.web.client_secret,
-      credentials.web.redirect_uris[0]
-    );
-    this.auth.setCredentials(token);
-    
+    console.log('🔍 Apps Script Log Reader');
+    console.log('=========================');
+
+    this.auth = getAuthClient();
+
     // Initialize Cloud Logging API client
     this.logging = google.logging({ version: 'v2', auth: this.auth });
-    
+
     console.log('✅ Authentication initialized');
   }
 
