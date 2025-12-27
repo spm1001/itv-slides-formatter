@@ -1,15 +1,10 @@
 {
-  "name": "slide-formatter-deployer",
-  "version": "1.0.0",
-  "description": "Automated deployment tool for Google Apps Script Slide Formatter project",
-  "main": "deploy-web-manual.js",
+  "name": "itv-slides-formatter",
+  "version": "2.0.0",
+  "description": "Google Apps Script tool for automated Google Slides formatting. Deploy via itv-appscript CLI.",
   "scripts": {
     "auth": "itv-auth -s drive -s script.projects -s slides -s sheets -s logging.read",
     "auth:manual": "itv-auth --manual -s drive -s script.projects -s slides -s sheets -s logging.read",
-    "deploy": "node deploy-web-manual.js",
-    "test": "node intelligent-log-retrieval.js",
-    "benchmark": "node benchmark-toggle-loop.js",
-    "logs": "node get-logs-programmatically.js",
     "clean": "rm -f token.json",
     "security:check": "./scripts/security-check.sh",
     "security:setup": "./scripts/setup-security.sh",
@@ -20,17 +15,10 @@
     "google-apps-script",
     "google-slides",
     "automation",
-    "deployment"
+    "formatting"
   ],
   "author": "Claude Code",
   "license": "MIT",
-  "dependencies": {
-    "dotenv": "^17.2.1",
-    "googleapis": "^128.0.0"
-  },
-  "engines": {
-    "node": ">=14.0.0"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/spm1001/slider.git"

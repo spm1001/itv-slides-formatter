@@ -7,204 +7,114 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Google Apps Script tool for automated Google Slides presentation formatting. Processes slides and linked objects (charts, tables) to ensure consistent formatting according to configurable rules.
 
 **Current Phase**: Phase 1 - Font swapping with hardcoded rules (Comic Sans MS ↔ Arial)
-**Future Phases**: Template-based formatting, UI selection, Sheets charts, external database, GCP integration
 
 ## Architecture
 
-### Dual Environment Architecture
+### Simple Two-Environment Model
 
-This project operates in **two distinct environments** that must work together:
+1. **Local** (this repo): Apps Script source files (.gs) + configuration
+2. **Remote** (Google's servers): Deployed Apps Script that runs in Google Sheets
 
-1. **Local Node.js Environment** (development machine)
-   - Deployment scripts (`deploy-web-manual.js`, `auth-with-monitoring.js`)
-   - OAuth authentication management
-   - Automated testing and log retrieval
-   - MCP server for documentation access
+You edit `.gs` files locally, deploy via CLI, and they run on Google's servers.
 
-2. **Remote Apps Script Environment** (Google's servers)
-   - Execution of `.gs` files
-   - Google Slides API access
-   - User interface (menu in Google Sheets)
-   - Presentation processing
-
-**Key insight**: You edit files locally and deploy them to Google's servers where they actually run.
-
-### Apps Script File Architecture
+### Apps Script Files (src/)
 
 ```
-main.gs (orchestration)
-  ├─ Handles onOpen() menu creation
-  ├─ Extracts presentation IDs from URLs
-  └─ Orchestrates formatting workflow
-
-config.gs (configuration management)
-  ├─ YAML configuration parsing
-  ├─ Font mapping definitions
-  └─ Toggle mode persistence
-
-formatter.gs (core formatting logic)
-  ├─ SlideFormatter class
-  ├─ Font discovery and mapping
-  ├─ Universal toggle logic (all fonts → target font)
-  └─ Batch processing coordination
-
-slides-api.gs (Google API client)
-  ├─ SlidesApiClient class
-  ├─ Retry logic with exponential backoff
-  ├─ Intelligent batching (max 50 operations)
-  └─ Element extraction (text, tables, shapes)
-
-ui.gs (user interface)
-  ├─ Progress dialog management
-  ├─ Error reporting with deep links
-  └─ Halt capability
-
-utils.gs (helpers)
-  ├─ Performance utilities
-  ├─ Toggle mode persistence
-  └─ Helper functions
-
-constants.gs (configuration)
-  ├─ OAuth scopes
-  ├─ Element type mappings
-  └─ Default configuration values
+main.gs          - Entry points: onOpen(), testFontSwap(), formatPresentation()
+formatter.gs     - SlideFormatter class, font discovery, universal toggle
+slides-api.gs    - SlidesApiClient, retry logic, intelligent batching
+config.gs        - YAML config parsing, font mappings
+constants.gs     - OAuth scopes, element types, defaults
+ui.gs            - Progress dialogs, error reporting
+utils.gs         - Helper functions, toggle persistence
+appsscript.json  - Manifest (scopes, advanced services)
 ```
 
-### Dual API Key Architecture
+### CLI Tools (installed via pipx)
 
-The project uses **two separate API keys** for security isolation:
-
-1. **Development API Key** (`GOOGLE_API_KEY` in `.env`)
-   - Used by MCP server for documentation lookup
-   - Restricted to Custom Search API only
-   - Lower security risk (read-only documentation access)
-
-2. **Deployment API Key** (`DEPLOYMENT_API_KEY` in `.env`)
-   - Used by deployment scripts for Apps Script operations
-   - Requires Drive, Slides, Sheets, Apps Script APIs
-   - Higher security risk (write access to Google Workspace)
-
-**Why separate keys?** Different scopes and risk profiles. If one key is compromised, the other remains secure.
-
-### Authentication via itv-auth CLI
-
-Authentication uses the shared `itv-auth` CLI from `itv-google-auth` library:
-
-```bash
-npm run auth          # Auto mode (opens browser)
-npm run auth:manual   # Manual mode (for SSH/remote)
-```
-
-The CLI:
-1. Reads `credentials.json` (OAuth client config)
-2. Runs the OAuth flow
-3. Saves `token.json` with embedded `client_id` and `client_secret`
-
-Node.js scripts then just read `token.json` - no need for `credentials.json`.
-
-**Token Lifecycle:**
-- Access token expires in 1 hour (auto-refreshed)
-- Refresh token valid ~6 months to 1 year
-- Scripts auto-save refreshed tokens to `token.json`
-
-**Critical**: `credentials.json` must be **Web Application** type (not Desktop).
+- **itv-auth**: OAuth authentication (from itv-google-auth)
+- **itv-appscript**: Deploy, run, logs (from itv-appscript-deploy)
 
 ## Development Workflow
 
-### First-Time Setup (New Machine)
+### First-Time Setup
 
 ```bash
-# 1. Clone and install
-git clone https://github.com/spm1001/slider.git
-cd slider
-npm install
-
-# 2. Install itv-auth CLI (if not already installed)
+# 1. Install CLI tools
 pipx install ~/Repos/itv-google-auth
+pipx install ~/Repos/itv-appscript-deploy
 
-# 3. Configure environment (MANDATORY)
-cp .env.template .env
-# Edit .env and add:
-#   - GOOGLE_API_KEY (development key)
-#   - DEPLOYMENT_API_KEY (deployment key)
-
-# 4. Add OAuth credentials
+# 2. Add OAuth credentials
 # Place credentials.json in project root (Web Application type)
 # Download from: https://console.cloud.google.com/apis/credentials
 
-# 5. Enable user-level Apps Script API (CRITICAL)
+# 3. Enable user-level Apps Script API
 # Visit: https://script.google.com/home/usersettings
 # Toggle ON: "Google Apps Script API"
 
-# 6. Authenticate and deploy
-npm run auth    # OAuth flow via itv-auth (creates token.json)
-npm run deploy  # Deploy .gs files to Apps Script project
+# 4. Authenticate
+npm run auth  # or: itv-auth -s drive -s script.projects -s slides -s sheets -s logging.read
+
+# 5. Deploy
+itv-appscript deploy
 ```
 
-### Regular Development Workflow
+### Regular Development
 
 ```bash
-# Edit .gs files locally
+# Edit source
 vim src/formatter.gs
 
-# Deploy changes
-npm run deploy
+# Deploy
+itv-appscript deploy
 
-# Test and view logs
-npm test        # Runs testFontSwap() and retrieves logs
-npm run logs    # Standalone log retrieval
+# Test (run in Apps Script editor, then check logs)
+itv-appscript logs -n 10
+
+# Or stream logs
+itv-appscript logs --follow
 ```
 
-### Security Workflow
+### Key Commands
 
 ```bash
-# Before ANY commit
-npm run security:check
+# Authentication
+npm run auth              # OAuth flow (auto mode)
+npm run auth:manual       # OAuth flow (manual mode, for SSH)
 
-# Verify:
-# - No API keys in files
-# - All secrets in environment variables
-# - Documentation uses placeholders only
-```
-
-### Git Identity (CRITICAL)
-
-**ALWAYS use GitHub noreply identity:**
-```bash
-git config --global user.name "spm1001"
-git config --global user.email "spm1001@users.noreply.github.com"
-```
-
-**NEVER commit with machine-specific identities** (e.g., `modha@kube.lan`).
-
-## Key Development Commands
-
-```bash
-# Authentication (via itv-auth CLI)
-npm run auth         # OAuth flow (auto mode, opens browser)
-npm run auth:manual  # OAuth flow (manual mode, for SSH/remote)
-
-# Deployment
-npm run deploy       # Deploy .gs files to Apps Script project
-
-# Testing
-npm test             # Execute testFontSwap() → Retrieve logs
-npm run logs         # Standalone log retrieval for debugging
+# Deployment & Logs (itv-appscript CLI)
+itv-appscript deploy      # Deploy .gs files
+itv-appscript logs -n 20  # View recent logs
+itv-appscript logs --follow  # Stream logs
 
 # Security
-npm run security:check   # Comprehensive security validation
-npm run security:setup   # Install pre-commit hooks
-
-# Utilities
-npm run benchmark        # Performance benchmarking
-npm run clean            # Remove token.json (force re-auth)
+npm run security:check    # Pre-commit secret scanning
+npm run clean             # Remove token.json (force re-auth)
 ```
 
-## Configuration System
+## Testing
 
-### Font Mapping Configuration
+**Test Presentation**: `1_WxqIvBQ2ArGjUqamVhVYKdAie5YrEgXmmUFMgNNpPA`
 
-Located in `config.gs`, editable via YAML:
+**Test Function**: `testFontSwap()` in `main.gs`
+
+```bash
+# 1. Deploy latest code
+itv-appscript deploy
+
+# 2. Run test in Apps Script editor
+# Open: https://script.google.com/d/1FDkshN59SqLSNzORh2VVoE0_PIZ5_Sqv3Dq7krtwvIL4nV_lI3LrJlin/edit
+# Run testFontSwap()
+
+# 3. Check logs
+itv-appscript logs -n 20
+```
+
+**Expected output**: Comic Sans MS ↔ Arial swap, 0 errors.
+
+## Configuration
+
+### Font Mapping (config.gs)
 
 ```yaml
 fontMappings:
@@ -214,216 +124,54 @@ fontMappings:
 processNotes: true
 skipErrors: true
 batchSize: 50
-apiRetries: 3
-apiRetryDelay: 1000
 ```
 
 ### Universal Toggle Mode
 
-The system supports **universal font toggling** - all fonts → single target font:
+Each run toggles between Comic Sans MS and Arial. State persists per-presentation.
 
-```javascript
-// First run: All fonts → Comic Sans MS
-// Second run: All fonts → Arial
-// Third run: All fonts → Comic Sans MS
-// ... (toggles each run)
-```
-
-Toggle mode persists per-presentation in PropertiesService.
-
-## Testing
-
-### Primary Test Case
-
-**Test Presentation**: `1_WxqIvBQ2ArGjUqamVhVYKdAie5YrEgXmmUFMgNNpPA`
-
-**Test Function**: `testFontSwap()` in `main.gs`
-
-**Expected Behavior**:
-- Swap Comic Sans MS ↔ Arial
-- Process all slides including notes pages
-- Complete in <60 seconds
-- Success rate >95%
-- Detailed logs via `npm test`
-
-### Running Tests
-
-```bash
-# Automated testing with log retrieval
-npm test
-
-# Manual testing
-# 1. Open Apps Script project
-# 2. Run testFontSwap() function
-# 3. View execution logs
-```
-
-## Common Development Tasks
-
-### Modifying Font Swapping Logic
-
-1. Edit `src/formatter.gs` (SlideFormatter class)
-2. Update font mappings in `src/config.gs`
-3. Deploy: `npm run deploy`
-4. Test: `npm test`
-
-### Adding New Formatting Rules
-
-1. Add configuration to `src/config.gs`
-2. Implement logic in `src/formatter.gs`
-3. Update API calls in `src/slides-api.gs` if needed
-4. Test with `npm test`
-
-### Debugging Failed Deployments
-
-```bash
-# Check API enablement
-# Visit: https://console.cloud.google.com/apis/dashboard
-# Required: Drive, Slides, Sheets, Apps Script APIs
-
-# Check user-level Apps Script API
-# Visit: https://script.google.com/home/usersettings
-# Must be enabled
-
-# Verify environment variables
-cat .env
-# Must contain DEPLOYMENT_API_KEY (GOOGLE_API_KEY optional for MCP)
-
-# Check credentials.json exists (needed for itv-auth)
-ls -la credentials.json
-
-# Re-authenticate
-rm token.json
-npm run auth
-npm run deploy
-```
-
-### Reading Execution Logs
-
-```bash
-# Automated log retrieval (20+ entries)
-npm run logs
-
-# View in Apps Script editor
-# Open project → Executions → View execution details
-```
-
-## Security Requirements
+## Security
 
 ### Pre-Commit Checklist
 
-Before ANY commit:
-- [ ] Run `npm run security:check` (must pass)
-- [ ] Verify no API keys in code/configs
-- [ ] Confirm all secrets in `.env`
-- [ ] Check documentation uses placeholders
+- [ ] Run `npm run security:check`
+- [ ] No API keys in code
+- [ ] No credentials in git
 
 ### Files That Must NEVER Be Committed
 
 ```
-.env                    # Environment variables with real keys
-credentials.json        # OAuth client configuration
-token.json             # OAuth tokens
-*.secret*              # Any file with "secret" in name
-*key*                  # Files with "key" in name (with exceptions)
+credentials.json    # OAuth client config
+token.json          # OAuth tokens
+.env                # Environment variables (if used)
 ```
 
-### If Secrets Are Exposed
+## Project Files
 
-**STOP all work immediately:**
-1. Revoke credentials at Google Cloud Console
-2. Follow `secrets/incident-response.md` procedures
-3. Clean git history with filter-branch
-4. Force push cleaned history
-5. Generate new credentials
-6. Document lessons learned
-
-## MCP Server Configuration
-
-**Custom Patched MCP Server**: `mcp-dev-assist-local/`
-
-**Purpose**: Efficient access to Google Workspace API documentation
-
-**Configuration**:
-- Uses Custom Search API (not Discovery Engine)
-- Requires `GOOGLE_API_KEY` in `.env`
-- Search Engine ID: `701ecba480bf443fa`
-
-**Usage**: Automatically configured in Claude Code workspace settings
-
-## Key Technical Concepts
-
-### Batch Processing
-
-Apps Script API has strict quotas. Use batching:
-- Max 50 operations per `batchUpdate` call
-- Intelligent batching in `slides-api.gs`
-- Retry logic with exponential backoff
-
-### Font Discovery
-
-Two approaches:
-1. **Explicit mappings**: Define specific font pairs in config
-2. **Universal toggle**: Discover all fonts → swap to single target
-
-### Error Handling
-
-**Philosophy**: Skip failed objects, continue processing
-- Collect errors for final report
-- Provide deep links to problematic slides
-- Graceful degradation for partial completion
-
-### Deep Links to Slides
-
-Format: `https://docs.google.com/presentation/d/{presentationId}/edit#slide=id.{slideId}`
-
-Generated automatically in error reports for quick navigation.
-
-## Project Files Reference
-
-### Documentation
-- `README.md` - Setup and deployment instructions
-- `SPECIFICATION.md` - Comprehensive technical specification
-- `docs/MACHINE_TRANSFER.md` - New machine setup guide
-- `secrets/` - Security procedures and incident response
-
-### Deployment
-- `deploy-web-manual.js` - Main deployment script (OAuth + Drive API)
-- `auth-with-monitoring.js` - Professional OAuth flow
-- `oauth-background.js` - Background OAuth server
-
-### Testing
-- `intelligent-log-retrieval.js` - Automated test execution and log retrieval
-- `get-logs-programmatically.js` - Standalone log access
-- `benchmark-toggle-loop.js` - Performance testing
-
-### Security
-- `scripts/security-check.sh` - Secret scanning
-- `scripts/setup-security.sh` - Pre-commit hook installation
-- `.env.template` - Environment variable template
+```
+src/                # Apps Script source (.gs files)
+deploy.json         # itv-appscript config (scriptId, gcpProjectId)
+credentials.json    # OAuth client (not committed)
+token.json          # OAuth tokens (not committed)
+package.json        # npm scripts for auth
+scripts/            # Security check scripts
+```
 
 ## Repository Information
 
 - **GitHub**: https://github.com/spm1001/slider
-- **Apps Script Project**: `1I2dUX4hBHie4JvxELe5Mog8PxHXRWLUDACYzw94NqMrQr-YGawsNsouu`
-- **Google Cloud Project**: `mit-dev-362409`
+- **Apps Script Project**: `1FDkshN59SqLSNzORh2VVoE0_PIZ5_Sqv3Dq7krtwvIL4nV_lI3LrJlin`
+- **GCP Project**: `mit-dev-362409`
 - **Test Presentation**: `1_WxqIvBQ2ArGjUqamVhVYKdAie5YrEgXmmUFMgNNpPA`
 
-## Performance Requirements
+## Known Issues
 
-- Process presentations up to 50 slides
-- Handle 20+ objects per slide
-- Complete processing in <60 seconds
-- Memory usage <100MB peak
-- Success rate >95%
-- API efficiency via intelligent batching
+### API Execution Not Working
 
-## Learning Documentation
+`itv-appscript run` fails with permission denied. This requires:
+1. Correct GCP project association (done)
+2. OAuth credentials from the same GCP project (currently using mit-workspace-mcp-server credentials)
 
-The user prefers **Socratic learning** - explain "how" and "why" when performing technical operations.
+**Workaround**: Run tests manually in Apps Script editor, use `itv-appscript logs` to view output.
 
-**When teaching new concepts**:
-- Record in `LEARNING_LOG.md` (append, never overwrite)
-- Structure: Question → Breakdown → Principles → Concepts
-- Use Socratic method - guided discovery
-- Connect to previous learning
+**Future fix**: Switch to OAuth credentials from mit-dev-362409.

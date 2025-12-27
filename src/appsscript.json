@@ -1,0 +1,31 @@
+{
+  "timeZone": "America/New_York",
+  "dependencies": {
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "Slides",
+        "serviceId": "slides",
+        "version": "v1"
+      },
+      {
+        "userSymbol": "Drive",
+        "serviceId": "drive",
+        "version": "v2"
+      },
+      {
+        "userSymbol": "Sheets",
+        "serviceId": "sheets",
+        "version": "v4"
+      }
+    ]
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/presentations",
+    "https://www.googleapis.com/auth/drive.readonly",
+    "https://www.googleapis.com/auth/spreadsheets"
+  ],
+  "runtimeVersion": "V8",
+  "executionApi": {
+    "access": "ANYONE"
+  }
+}
