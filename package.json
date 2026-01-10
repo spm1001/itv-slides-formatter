@@ -3,9 +3,9 @@
   "version": "2.0.0",
   "description": "Google Apps Script tool for automated Google Slides formatting. Deploy via itv-appscript CLI.",
   "scripts": {
-    "auth": "itv-auth -s drive -s script.projects -s slides -s sheets -s logging.read",
-    "auth:manual": "itv-auth --manual -s drive -s script.projects -s slides -s sheets -s logging.read",
-    "clean": "rm -f token.json",
+    "auth": "echo 'Auth is centralized. Run: cd ~/Repos/mcp-google-workspace && uv run python -m workspace_mcp.auth'",
+    "auth:manual": "echo 'Auth is centralized. Run: cd ~/Repos/mcp-google-workspace && uv run python -m workspace_mcp.auth --manual'",
+    "clean": "echo 'Token is centralized at ~/Repos/mcp-google-workspace/token.json'",
     "security:check": "./scripts/security-check.sh",
     "security:setup": "./scripts/setup-security.sh",
     "security:scan": "npm run security:check",

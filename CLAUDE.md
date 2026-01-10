@@ -8,6 +8,21 @@ Google Apps Script tool for automated Google Slides presentation formatting. Pro
 
 **Current Phase**: Phase 1 - Font swapping with hardcoded rules (Comic Sans MS ↔ Arial)
 
+## OAuth: Consumer Project
+
+**⚠️ DO NOT RUN `npm run auth` HERE**
+
+This project uses the centralized token from `mcp-google-workspace`:
+- Token: `/Users/modha/Repos/mcp-google-workspace/token.json`
+- Credentials: `/Users/modha/Repos/mcp-google-workspace/credentials.json`
+
+**If auth is needed:**
+```bash
+cd ~/Repos/mcp-google-workspace && uv run python -m workspace_mcp.auth
+```
+
+The `npm run auth` command just prints a reminder to run auth at the canonical location.
+
 ## Architecture
 
 ### Simple Two-Environment Model
