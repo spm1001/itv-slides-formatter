@@ -179,6 +179,50 @@ scripts/            # Security check scripts
 - **GCP Project**: `itv-mit-slides-formatter`
 - **Test Presentation**: `1_WxqIvBQ2ArGjUqamVhVYKdAie5YrEgXmmUFMgNNpPA`
 
+## Slides API Learnings (Jan 2026)
+
+### The Goblin Census
+
+**Non-placeholder elements don't inherit from master template.** They have hardcoded defaults:
+
+| Element Type | Default Font | Inherits? | Formatter Strategy |
+|--------------|--------------|-----------|-------------------|
+| Title/Body/Subtitle placeholders | (from master) | ✅ Yes | Clear overrides |
+| Speaker notes | (from master) | ✅ Yes | Clear overrides |
+| Plain text boxes | Arial 18pt | ❌ No | Explicit SET |
+| Shapes with text | Arial 14pt | ❌ No | Explicit SET |
+| Table cells | Arial 14pt | ❌ No | Explicit SET |
+| Chart text | Roboto (Sheets) | ❌ No | Sheets API |
+
+### Field Mask Pattern for Bulk Reset
+
+To clear overrides and let inheritance take over (placeholders only):
+```python
+{
+    "updateTextStyle": {
+        "objectId": "...",
+        "style": {},  # Empty = clear
+        "fields": "fontFamily,fontSize,bold,foregroundColor"  # What to clear
+    }
+}
+```
+- Property in body but NOT in mask → silently ignored
+- Property in mask but NOT in body → cleared to default
+
+### Two-API Reality for Charts
+
+Embedded charts require TWO APIs:
+- **Slides API**: Position, size, linking (that's all)
+- **Sheets API**: All styling — series colors, fonts, axes, legends
+
+Chart text defaults to Roboto, not Arial.
+
+### Units
+
+EMU (English Metric Units): 914400 EMU = 1 inch = 72 points
+- 12700 EMU = 1 point
+- Common outline: 9525 EMU ≈ 0.75pt
+
 ## Known Issues
 
 ### API Execution Not Working
