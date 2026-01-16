@@ -2,6 +2,6 @@
   "scriptId": "1FDkshN59SqLSNzORh2VVoE0_PIZ5_Sqv3Dq7krtwvIL4nV_lI3LrJlin",
   "gcpProjectId": "itv-mit-slides-formatter",
   "src": "./src",
-  "credentials": "/Users/modha/Repos/mcp-google-workspace/credentials.json",
-  "token": "/Users/modha/Repos/mcp-google-workspace/token.json"
+  "credentials": "./credentials.json",
+  "token": "./token.json"
 }
