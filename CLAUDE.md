@@ -8,6 +8,8 @@ Google Apps Script tool for automated Google Slides presentation formatting. Pro
 
 **Current Phase**: Phase 1 - Font swapping with hardcoded rules (Comic Sans MS ↔ Arial)
 
+**Distribution**: See `docs/DISTRIBUTION.md` for the three-project model (dev sandboxes + production) and release workflow.
+
 ## OAuth: Consumer Project
 
 **⚠️ DO NOT RUN `npm run auth` HERE**
