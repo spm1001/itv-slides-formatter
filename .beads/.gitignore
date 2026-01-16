@@ -32,3 +32,6 @@ beads.right.meta.json
 !interactions.jsonl
 !metadata.json
 !config.json
+
+# Prevent nested .beads creation
+.beads/

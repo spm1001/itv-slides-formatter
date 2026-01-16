@@ -223,12 +223,59 @@ EMU (English Metric Units): 914400 EMU = 1 inch = 72 points
 - 12700 EMU = 1 point
 - Common outline: 9525 EMU ≈ 0.75pt
 
+### Grid System (16:9 Widescreen)
+
+Standard 16:9 slide: **9,144,000 × 5,143,500 EMU** (10" × 5.625")
+
+Grid units that divide evenly into both dimensions:
+
+| Grid Unit (EMU) | Grid Size | Cell Size | Notes |
+|-----------------|-----------|-----------|-------|
+| 571,500 | 16 × 9 | 0.625" | Very coarse (aspect ratio itself) |
+| 285,750 | 32 × 18 | 0.31" | Major zones |
+| **114,300** | **80 × 45** | **⅛"** | Recommended — clean imperial |
+| 57,150 | 160 × 90 | 1/16" | Fine |
+
+### Colors: RGB vs Theme References
+
+Two ways to specify colors in the API:
+
+```javascript
+// Hardcoded RGB (doesn't change with theme)
+{ rgbColor: { red: 0.9, green: 0.2, blue: 0.2 } }
+
+// Theme reference (updates when theme changes)
+{ themeColor: "ACCENT1" }
+```
+
+Theme palette is readable via `master.pageProperties.colorScheme.colors`. Each slot (DARK1, LIGHT1, ACCENT1-6, etc.) has RGB values.
+
+### Reading Master Template
+
+`Slides.Presentations.get()` returns:
+- `masters[].pageProperties.colorScheme` — the 12-slot theme palette
+- `masters[].pageElements[].shape.placeholder` — TITLE, BODY, etc. with font/size
+- `layouts[]` — available layout templates with names
+
 ## Known Issues
 
-### API Execution Not Working
+### Remote Execution Not Working (Jan 2026)
 
-`itv-appscript run` fails with permission denied. This requires:
-1. Correct GCP project association (done)
-2. OAuth credentials from the same GCP project
+`itv-appscript run` fails. Root cause: **GCP project mismatch**.
 
-All three now work with credentials from `itv-mit-slides-formatter`.
+The execution API requires OAuth credentials from the **same** GCP project the script is linked to.
+
+| Component | Project |
+|-----------|---------|
+| Apps Script project linked to | `itv-mit-slides-formatter` |
+| Credentials in mcp-google-workspace | `mit-workspace-mcp-server` |
+
+**Deploy works** (uses script.projects scope) but **run fails** (execution API checks project match).
+
+**Workaround:** Run functions manually in Apps Script editor, check logs via `itv-appscript logs`.
+
+**Fix path:** Either:
+1. Change Apps Script linking to `mit-workspace-mcp-server`, or
+2. Use credentials from `itv-mit-slides-formatter` with separate token
+
+Also: `itv-appscript-deploy` has a bug with `scriptProcessFilter` parameter — use `--force` to bypass process checking.
