@@ -21,7 +21,7 @@ Google Apps Script tool for automated Google Slides presentation formatting.
 
 1. Install the CLI:
    ```bash
-   uv tool install git+ssh://git@github.com/spm1001/itv-appscript-deploy
+   uv tool install git+https://github.com/spm1001/itv-appscript-deploy@main
    ```
 2. Get `credentials.json` (see docs/DISTRIBUTION.md)
 3. Copy template: `cp deploy.json.template deploy.json` and add your script ID

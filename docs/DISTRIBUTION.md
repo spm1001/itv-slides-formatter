@@ -181,7 +181,6 @@ GitHub Actions workflow (`.github/workflows/deploy-production.yml`) deploys auto
 |--------|--------|-------|
 | `GOOGLE_CREDENTIALS` | `credentials.json` contents | Same for all envs |
 | `GOOGLE_PRODUCTION_TOKEN` | `token.production.json` contents | From measurement@itv.com auth |
-| `GH_PAT` | GitHub Personal Access Token | Needs `repo` scope for private itv-appscript-deploy |
 
 **To set up secrets:**
 ```bash
@@ -236,7 +235,7 @@ The credentials.json is the same for everyone — it identifies the app, not the
 4. [ ] Create personal Apps Script project at script.google.com
 5. [ ] Link Apps Script project to GCP project `itv-mit-slides-formatter` (Resources → Cloud Platform project)
 6. [ ] Update `deploy.json` with your script ID
-7. [ ] Install CLI: `uv tool install git+ssh://git@github.com/spm1001/itv-appscript-deploy`
+7. [ ] Install CLI: `uv tool install git+https://github.com/spm1001/itv-appscript-deploy@main`
 8. [ ] Authenticate: `itv-appscript auth`
 9. [ ] Deploy: `itv-appscript deploy`
 10. [ ] Test: Open any Google Slides → Extensions → Slide Formatter menu appears
@@ -251,4 +250,4 @@ The credentials.json is the same for everyone — it identifies the app, not the
 6. [ ] Share Apps Script project with developers as Editors
 7. [x] Create versioned deployment (type: Add-on)
 8. [x] Document install URL for users
-9. [ ] Store secrets in GitHub (see "For CI/CD" section): `GOOGLE_CREDENTIALS`, `GOOGLE_PRODUCTION_TOKEN`, `GH_PAT`
+9. [ ] Store secrets in GitHub (see "For CI/CD" section): `GOOGLE_CREDENTIALS`, `GOOGLE_PRODUCTION_TOKEN`

@@ -49,7 +49,7 @@ appsscript.json  - Manifest (scopes, advanced services)
 
 Install once:
 ```bash
-uv tool install git+ssh://git@github.com/spm1001/itv-appscript-deploy
+uv tool install git+https://github.com/spm1001/itv-appscript-deploy@main
 ```
 
 Then use directly:
@@ -66,7 +66,7 @@ itv-appscript logs -n 20    # View logs
 
 ```bash
 # 1. Install CLI (if not already)
-uv tool install git+ssh://git@github.com/spm1001/itv-appscript-deploy
+uv tool install git+https://github.com/spm1001/itv-appscript-deploy@main
 
 # 2. Get credentials.json (see docs/DISTRIBUTION.md)
 
