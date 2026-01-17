@@ -281,6 +281,17 @@ For non-developer users, **Google Workspace Marketplace publishing** is required
 - No Google review needed for internal tools
 - Enables Extensions → Add-ons → Get add-ons installation
 
+## CI/CD Auth Learnings (Jan 2026)
+
+**Problem:** GitHub Actions needs to `uv tool install` from two private repos (itv-appscript-deploy + transitive dep itv-google-auth).
+
+**What didn't work:**
+- **Deploy keys:** Work per-repo, but itv-appscript-deploy's pyproject.toml references itv-google-auth via HTTPS. Deploy keys only work for SSH URLs.
+- **git config insteadOf:** Set `url."git@github.com:".insteadOf "https://github.com/"` but uv uses libgit2 internally which doesn't respect this config.
+
+**What works:**
+- **Fine-grained PAT** scoped to both repos with Contents: read-only. Store as `GH_PAT` secret, use in workflow: `git+https://${{ secrets.GH_PAT }}@github.com/...`
+
 ## Known Issues
 
 None currently.
