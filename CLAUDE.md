@@ -18,7 +18,7 @@ This project has its own OAuth credentials and token (decoupled from mcp-google-
 
 **To re-authenticate:**
 ```bash
-uv run --directory ~/Repos/itv-appscript-deploy itv-appscript auth --config ./deploy.json
+itv-appscript auth
 ```
 
 Scopes are automatically read from `src/appsscript.json` and merged with CLI scopes.
@@ -117,13 +117,13 @@ npm run clean             # Remove token.json (force re-auth)
 
 ```bash
 # 1. Deploy latest code
-uv run --directory ~/Repos/itv-appscript-deploy itv-appscript deploy --config ./deploy.json
+itv-appscript deploy
 
 # 2. Run test function
-uv run --directory ~/Repos/itv-appscript-deploy itv-appscript run testFontSwap --config ./deploy.json
+itv-appscript run testFontSwap
 
 # 3. Check logs (if needed)
-uv run --directory ~/Repos/itv-appscript-deploy itv-appscript logs -n 20 --config ./deploy.json
+itv-appscript logs -n 20
 ```
 
 **Expected output**: Comic Sans MS ↔ Arial swap, 0 errors.
