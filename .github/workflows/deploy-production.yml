@@ -19,10 +19,12 @@ jobs:
         with:
           version: "latest"
 
-      - name: Setup SSH for private repo
+      - name: Setup SSH for private repos
         uses: webfactory/ssh-agent@v0.9.1
         with:
-          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+          ssh-private-key: |
+            ${{ secrets.DEPLOY_KEY }}
+            ${{ secrets.DEPLOY_KEY_AUTH }}
 
       - name: Install itv-appscript
         run: uv tool install git+ssh://git@github.com/spm1001/itv-appscript-deploy@main
