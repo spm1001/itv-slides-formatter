@@ -3,7 +3,7 @@ function onOpen() {
 }
 
 function createMenu() {
-  const ui = SpreadsheetApp.getUi();
+  const ui = SlidesApp.getUi();
   ui.createMenu('Slide Formatter')
     .addItem('Format Presentation', 'formatPresentation')
     .addItem('Settings', 'showSettings')
@@ -12,7 +12,7 @@ function createMenu() {
 
 function formatPresentation() {
   try {
-    const ui = SpreadsheetApp.getUi();
+    const ui = SlidesApp.getUi();
     const response = ui.prompt(
       'Format Presentation',
       'Enter the Google Slides presentation URL:',
@@ -41,7 +41,7 @@ function formatPresentation() {
     }
   } catch (error) {
     Logger.log('Error in formatPresentation: ' + error.toString());
-    SpreadsheetApp.getUi().alert('Error', 'An error occurred: ' + error.message, SpreadsheetApp.getUi().ButtonSet.OK);
+    SlidesApp.getUi().alert('Error', 'An error occurred: ' + error.message, SlidesApp.getUi().ButtonSet.OK);
   }
 }
 

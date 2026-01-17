@@ -10,20 +10,18 @@ Google Apps Script tool for automated Google Slides presentation formatting. Pro
 
 **Distribution**: See `docs/DISTRIBUTION.md` for the three-project model (dev sandboxes + production) and release workflow.
 
-## OAuth: Consumer Project
+## OAuth: Standalone Project
 
-**⚠️ DO NOT RUN `npm run auth` HERE**
+This project has its own OAuth credentials and token (decoupled from mcp-google-workspace as of Jan 2026):
+- **Credentials**: `./credentials.json` (from GCP project `itv-mit-slides-formatter`)
+- **Token**: `./token.json` (local, not symlinked)
 
-This project uses the centralized token from `mcp-google-workspace`:
-- Token: `/Users/modha/Repos/mcp-google-workspace/token.json`
-- Credentials: `/Users/modha/Repos/mcp-google-workspace/credentials.json`
-
-**If auth is needed:**
+**To re-authenticate:**
 ```bash
-cd ~/Repos/mcp-google-workspace && uv run python -m workspace_mcp.auth
+itv-appscript auth
 ```
 
-The `npm run auth` command just prints a reminder to run auth at the canonical location.
+Scopes are automatically read from `src/appsscript.json` and merged with CLI scopes.
 
 ## Architecture
 
@@ -119,11 +117,10 @@ npm run clean             # Remove token.json (force re-auth)
 # 1. Deploy latest code
 itv-appscript deploy
 
-# 2. Run test in Apps Script editor
-# Open: https://script.google.com/d/1FDkshN59SqLSNzORh2VVoE0_PIZ5_Sqv3Dq7krtwvIL4nV_lI3LrJlin/edit
-# Run testFontSwap()
+# 2. Run test function
+itv-appscript run testFontSwap
 
-# 3. Check logs
+# 3. Check logs (if needed)
 itv-appscript logs -n 20
 ```
 
@@ -261,23 +258,4 @@ Theme palette is readable via `master.pageProperties.colorScheme.colors`. Each s
 
 ## Known Issues
 
-### Remote Execution Not Working (Jan 2026)
-
-`itv-appscript run` fails. Root cause: **GCP project mismatch**.
-
-The execution API requires OAuth credentials from the **same** GCP project the script is linked to.
-
-| Component | Project |
-|-----------|---------|
-| Apps Script project linked to | `itv-mit-slides-formatter` |
-| Credentials in mcp-google-workspace | `mit-workspace-mcp-server` |
-
-**Deploy works** (uses script.projects scope) but **run fails** (execution API checks project match).
-
-**Workaround:** Run functions manually in Apps Script editor, check logs via `itv-appscript logs`.
-
-**Fix path:** Either:
-1. Change Apps Script linking to `mit-workspace-mcp-server`, or
-2. Use credentials from `itv-mit-slides-formatter` with separate token
-
-Also: `itv-appscript-deploy` has a bug with `scriptProcessFilter` parameter — use `--force` to bypass process checking.
+None currently. Remote execution (`itv-appscript run`) works after decoupling auth (Jan 2026).

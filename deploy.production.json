@@ -1,0 +1,7 @@
+{
+  "scriptId": "1vCtFsdMR1eTYvitf7kmIMUl5CWDon6kTjruqYxbu-yDxJWIuTjPmAOny",
+  "gcpProjectId": "itv-mit-slides-formatter",
+  "src": "./src",
+  "credentials": "./credentials.json",
+  "token": "./token.production.json"
+}

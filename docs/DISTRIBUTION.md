@@ -22,7 +22,7 @@ GitHub: spm1001/itv-slides-formatter
 |---------|-------|-----------|---------|
 | Slides Formatter - Sameer Dev | Sameer | `1FDkshN59...` | Personal sandbox |
 | Slides Formatter - [Colleague] Dev | Colleague | TBD | Their sandbox |
-| Slides Formatter - Production | MIT service account | TBD | What users install |
+| itv-mit-slides-formatter-deploy | measurement@itv.com | `1vCtFsdMR1eTYvitf7kmIMUl5CWDon6kTjruqYxbu-yDxJWIuTjPmAOny` | Production |
 
 All three link to the same GCP project: `itv-mit-slides-formatter`
 
@@ -73,17 +73,19 @@ Shows structure without secrets:
 
 ### deploy.production.json (committed)
 
-Production script ID, credentials path TBD based on service account setup:
+Production script ID, uses shared credentials and separate token:
 
 ```json
 {
-  "scriptId": "PRODUCTION_SCRIPT_ID",
+  "scriptId": "1vCtFsdMR1eTYvitf7kmIMUl5CWDon6kTjruqYxbu-yDxJWIuTjPmAOny",
   "gcpProjectId": "itv-mit-slides-formatter",
   "src": "./src",
-  "credentials": "/path/to/service/credentials.json",
-  "token": "/path/to/service/token.json"
+  "credentials": "./credentials.json",
+  "token": "./token.production.json"
 }
 ```
+
+Note: `token.production.json` is gitignored. For CI/CD, store in GitHub Secrets.
 
 ## Development Workflow
 
@@ -118,18 +120,14 @@ No merge conflicts in Apps Script because each dev has their own project.
 # 1. Ensure you're on main, tests pass
 git checkout main && git pull
 
-# 2. Switch to production config
-cp deploy.production.json deploy.json
+# 2. Deploy to production (uses separate config)
+itv-appscript deploy --config deploy.production.json
 
-# 3. Deploy code
-itv-appscript deploy
-
-# 4. Create new version (users auto-update)
-itv-appscript versions create "v1.2 - Added feature X"
-
-# 5. Restore dev config
-git checkout deploy.json
+# 3. Create new version (users auto-update)
+itv-appscript versions create "v1.2 - Added feature X" --config deploy.production.json
 ```
+
+No need to swap config files — the `--config` flag handles it.
 
 ### Deployment Types
 
@@ -144,14 +142,17 @@ git checkout deploy.json
 
 ### First-time install (one-time per user)
 
-**Option A: Direct URL** (preferred)
-```
-https://script.google.com/macros/s/{DEPLOYMENT_ID}/exec
-```
+**Production Deployment ID:** `AKfycbwnnvFlFwfdN5BV-QXqF7QGfGGs5S82MIPRa0Qj8RTQn-EN-kveA9nhe31Ea1pefgal`
 
-**Option B: From shared project**
-1. Open the Apps Script project (shared with them as Viewer)
-2. Deploy → Test deployments → Install
+**Option A: From shared project** (recommended for ITV users)
+1. Open the Apps Script project: https://script.google.com/home/projects/1vCtFsdMR1eTYvitf7kmIMUl5CWDon6kTjruqYxbu-yDxJWIuTjPmAOny
+2. Click **Deploy** → **Test deployments**
+3. Select the versioned deployment → **Install**
+
+**Option B: Direct install URL**
+```
+https://script.google.com/macros/s/AKfycbwnnvFlFwfdN5BV-QXqF7QGfGGs5S82MIPRa0Qj8RTQn-EN-kveA9nhe31Ea1pefgal/exec
+```
 
 ### User experience after install
 
@@ -161,29 +162,28 @@ https://script.google.com/macros/s/{DEPLOYMENT_ID}/exec
 
 Updates are automatic - no user action needed.
 
-## Service Account Setup
+## Shared Account Setup
 
-The production script is owned by a shared MIT service account to avoid single-person dependency.
+The production script is owned by `measurement@itv.com` (shared MIT team account via Okta SSO).
 
-### Creating the service account
+### Setup (completed Jan 2026)
 
-1. Create Google account: `mit-slides-tools@itv.com` (or similar)
-2. Add to GCP project `itv-mit-slides-formatter` with Editor role
-3. Create Apps Script project under this account
-4. Share with developers as Editors
+1. ✅ `measurement@itv.com` added to GCP project `itv-mit-slides-formatter` with Editor role
+2. ✅ Apps Script project `itv-mit-slides-formatter-deploy` created under this account
+3. ✅ Linked to GCP project
+4. ✅ OAuth token generated and stored as `token.production.json`
 
-### Authenticating as service account
+### Re-authenticating (if token expires)
 
-For deploying to production, you need the service account's token:
+1. Log into Chrome as `measurement@itv.com` (via Okta)
+2. Run: `itv-appscript auth --config deploy.production.json`
+3. Token saved to `token.production.json`
 
-**Option A: Shared credentials (simpler)**
-- Store service account's credentials.json securely
-- Use `itv-appscript auth --manual` to generate token
-- Store token.json securely
+Anyone who can Okta-auth as measurement@itv.com can refresh the token.
 
-**Option B: Machine-based (more secure)**
-- Dedicated machine/VM logged in as service account
-- Deploy from there
+### For CI/CD
+
+Store `token.production.json` contents in GitHub Secrets as `GOOGLE_PRODUCTION_TOKEN`.
 
 ## Future: Marketplace Publishing
 
@@ -207,10 +207,12 @@ For now, direct installation is sufficient for ~20 users.
 
 ## Checklist: Production Setup (One-Time)
 
-1. [ ] Create MIT service account
-2. [ ] Create production Apps Script project under service account
-3. [ ] Link to GCP project
-4. [ ] Share with developers as Editors
-5. [ ] Create versioned deployment (type: Add-on)
-6. [ ] Update deploy.production.json with script ID
-7. [ ] Document install URL for users
+1. [x] Add `measurement@itv.com` to GCP project as Editor
+2. [x] Create production Apps Script project under shared account
+3. [x] Link to GCP project `itv-mit-slides-formatter`
+4. [x] Generate OAuth token (`itv-appscript auth --config deploy.production.json`)
+5. [x] Update deploy.production.json with script ID
+6. [ ] Share Apps Script project with developers as Editors
+7. [x] Create versioned deployment (type: Add-on)
+8. [x] Document install URL for users
+9. [ ] Store token in GitHub Secrets for CI/CD

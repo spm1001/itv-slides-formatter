@@ -166,7 +166,7 @@ apiRetryDelay: 1000\`;
     .setHeight(600)
     .setTitle('Slide Formatter Settings');
   
-  SpreadsheetApp.getUi().showModalDialog(htmlOutput, 'Settings');
+  SlidesApp.getUi().showModalDialog(htmlOutput, 'Settings');
 }
 
 function getCurrentConfigYaml() {
@@ -307,12 +307,12 @@ function showProgressDialog() {
     </html>
   `;
   
-  const htmlOutput = HtmlService.createHtml(html)
+  const htmlOutput = HtmlService.createHtmlOutput(html)
     .setWidth(400)
     .setHeight(300)
     .setTitle('Processing...');
   
-  SpreadsheetApp.getUi().showModelessDialog(htmlOutput, 'Processing Presentation');
+  SlidesApp.getUi().showModelessDialog(htmlOutput, 'Processing Presentation');
 }
 
 function haltProcessing() {
