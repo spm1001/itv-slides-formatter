@@ -1,5 +1,5 @@
 {
-  "scriptId": "1FDkshN59SqLSNzORh2VVoE0_PIZ5_Sqv3Dq7krtwvIL4nV_lI3LrJlin",
+  "scriptId": "YOUR_APPS_SCRIPT_PROJECT_ID",
   "gcpProjectId": "itv-mit-slides-formatter",
   "src": "./src",
   "credentials": "./credentials.json",
