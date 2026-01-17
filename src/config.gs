@@ -219,40 +219,63 @@ function validateConfig(config) {
   return true;
 }
 
-function getConfigFromSheet() {
+function getConfigFromStorage(presentationId) {
   try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Config');
-    if (!sheet) {
+    const properties = PropertiesService.getScriptProperties();
+    const key = `config_${presentationId || 'global'}`;
+    const jsonString = properties.getProperty(key);
+
+    if (!jsonString) {
       return getDefaultConfig();
     }
-    
-    const yamlRange = sheet.getRange('B1');
-    const yamlString = yamlRange.getValue();
-    
-    if (!yamlString || yamlString.trim() === '') {
-      return getDefaultConfig();
-    }
-    
-    return parseYamlConfig(yamlString);
+
+    const config = JSON.parse(jsonString);
+    validateConfig(config);
+    return config;
   } catch (error) {
-    Logger.log('Error loading config from sheet: ' + error.toString());
+    Logger.log('Error loading config from storage: ' + error.toString());
     return getDefaultConfig();
   }
 }
 
-function saveConfigToSheet(config) {
+// Legacy function name for compatibility with ui.gs
+function getConfigFromSheet() {
+  // Get active presentation ID for per-presentation settings
   try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Config') || 
-                  SpreadsheetApp.getActiveSpreadsheet().insertSheet('Config');
-    
-    const yamlString = configToYaml(config);
-    sheet.getRange('A1').setValue('Configuration (YAML):');
-    sheet.getRange('B1').setValue(yamlString);
-    
+    const presentation = SlidesApp.getActivePresentation();
+    const presentationId = presentation ? presentation.getId() : null;
+    return getConfigFromStorage(presentationId);
+  } catch (error) {
+    Logger.log('Error getting presentation ID: ' + error.toString());
+    return getConfigFromStorage(null);
+  }
+}
+
+function saveConfigToStorage(config, presentationId) {
+  try {
+    validateConfig(config);
+    const properties = PropertiesService.getScriptProperties();
+    const key = `config_${presentationId || 'global'}`;
+    const jsonString = JSON.stringify(config);
+
+    properties.setProperty(key, jsonString);
+    Logger.log(`Saved config for ${key}`);
     return true;
   } catch (error) {
-    Logger.log('Error saving config to sheet: ' + error.toString());
+    Logger.log('Error saving config to storage: ' + error.toString());
     return false;
+  }
+}
+
+// Legacy function name for compatibility with ui.gs
+function saveConfigToSheet(config) {
+  try {
+    const presentation = SlidesApp.getActivePresentation();
+    const presentationId = presentation ? presentation.getId() : null;
+    return saveConfigToStorage(config, presentationId);
+  } catch (error) {
+    Logger.log('Error getting presentation ID: ' + error.toString());
+    return saveConfigToStorage(config, null);
   }
 }
 

@@ -638,3 +638,32 @@ function testColorReadAndChange() {
     };
   }
 }
+
+function testConfigPersistence() {
+  const testPresentationId = '1_WxqIvBQ2ArGjUqamVhVYKdAie5YrEgXmmUFMgNNpPA';
+
+  Logger.log('=== Testing Config Persistence ===');
+
+  // 1. Get default config
+  const defaultConfig = getDefaultConfig();
+  Logger.log('Default config: ' + JSON.stringify(defaultConfig));
+
+  // 2. Modify and save
+  const modifiedConfig = { ...defaultConfig, batchSize: 42 };
+  const saveResult = saveConfigToStorage(modifiedConfig, testPresentationId);
+  Logger.log('Save result: ' + saveResult);
+
+  // 3. Load back
+  const loadedConfig = getConfigFromStorage(testPresentationId);
+  Logger.log('Loaded config: ' + JSON.stringify(loadedConfig));
+
+  // 4. Verify
+  const success = loadedConfig.batchSize === 42;
+  Logger.log('Persistence test: ' + (success ? 'PASSED' : 'FAILED'));
+
+  // 5. Restore default
+  saveConfigToStorage(defaultConfig, testPresentationId);
+  Logger.log('Restored default config');
+
+  return { success, savedBatchSize: 42, loadedBatchSize: loadedConfig.batchSize };
+}
