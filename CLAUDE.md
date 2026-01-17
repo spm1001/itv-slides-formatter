@@ -268,8 +268,8 @@ This project was originally designed as a **Sheets-bound add-on** that processed
 - Added `script.container.ui` scope for modal dialogs
 - `formatPresentation()` now uses `SlidesApp.getActivePresentation()` instead of URL prompt
 
-**Still using SpreadsheetApp (needs fixing):**
-- `config.gs` lines 224-246 — settings persistence assumes a backing spreadsheet. Currently falls back to defaults in Slides context.
+**Fully migrated (Jan 2026):**
+- `config.gs` now uses PropertiesService for settings persistence (per-presentation via `config_${presentationId}` keys).
 
 ### Marketplace Publishing Required
 
@@ -281,4 +281,4 @@ For non-developer users, **Google Workspace Marketplace publishing** is required
 
 ## Known Issues
 
-- **Settings don't persist in Slides context** — `config.gs` uses SpreadsheetApp for storage, which fails silently. Settings work within a session but don't save.
+None currently.
