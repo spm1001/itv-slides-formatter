@@ -26,6 +26,9 @@ jobs:
             ${{ secrets.DEPLOY_KEY }}
             ${{ secrets.DEPLOY_KEY_AUTH }}
 
+      - name: Rewrite HTTPS to SSH for private repos
+        run: git config --global url."git@github.com:spm1001/".insteadOf "https://github.com/spm1001/"
+
       - name: Install itv-appscript
         run: uv tool install git+ssh://git@github.com/spm1001/itv-appscript-deploy@main
 
