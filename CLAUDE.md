@@ -18,7 +18,7 @@ This project has its own OAuth credentials and token (decoupled from mcp-google-
 
 **To re-authenticate:**
 ```bash
-itv-appscript auth
+uv run --directory ~/Repos/itv-appscript-deploy itv-appscript auth --config ./deploy.json
 ```
 
 Scopes are automatically read from `src/appsscript.json` and merged with CLI scopes.
@@ -45,33 +45,26 @@ utils.gs         - Helper functions, toggle persistence
 appsscript.json  - Manifest (scopes, advanced services)
 ```
 
-### CLI Tools (installed via pipx)
+### CLI Tools
 
-- **itv-auth**: OAuth authentication (from itv-google-auth)
-- **itv-appscript**: Deploy, run, logs (from itv-appscript-deploy)
+- **itv-auth**: OAuth authentication — see [itv-google-auth](~/Repos/itv-google-auth)
+- **itv-appscript**: Deploy, run, logs — see [itv-appscript-deploy](~/Repos/itv-appscript-deploy)
+
+**Invocation pattern** (always uses latest code):
+```bash
+uv run --directory ~/Repos/itv-google-auth itv-auth <args>
+uv run --directory ~/Repos/itv-appscript-deploy itv-appscript <command> --config ./deploy.json
+```
 
 ## Development Workflow
 
 ### First-Time Setup
 
+See the respective tool repos for installation/auth setup. Then:
+
 ```bash
-# 1. Install CLI tools
-pipx install ~/Repos/itv-google-auth
-pipx install ~/Repos/itv-appscript-deploy
-
-# 2. Add OAuth credentials
-# Place credentials.json in project root (Web Application type)
-# Download from: https://console.cloud.google.com/apis/credentials
-
-# 3. Enable user-level Apps Script API
-# Visit: https://script.google.com/home/usersettings
-# Toggle ON: "Google Apps Script API"
-
-# 4. Authenticate
-npm run auth  # or: itv-auth -s drive -s script.projects -s slides -s sheets -s logging.read
-
-# 5. Deploy
-itv-appscript deploy
+# Deploy
+uv run --directory ~/Repos/itv-appscript-deploy itv-appscript deploy --config ./deploy.json
 ```
 
 ### Regular Development
@@ -80,14 +73,11 @@ itv-appscript deploy
 # Edit source
 vim src/formatter.gs
 
-# Deploy
-itv-appscript deploy
+# Deploy (using the uv pattern above)
+uv run --directory ~/Repos/itv-appscript-deploy itv-appscript deploy --config ./deploy.json
 
-# Test (run in Apps Script editor, then check logs)
-itv-appscript logs -n 10
-
-# Or stream logs
-itv-appscript logs --follow
+# Check logs
+uv run --directory ~/Repos/itv-appscript-deploy itv-appscript logs -n 10 --config ./deploy.json
 ```
 
 ### Key Commands
@@ -97,10 +87,9 @@ itv-appscript logs --follow
 npm run auth              # OAuth flow (auto mode)
 npm run auth:manual       # OAuth flow (manual mode, for SSH)
 
-# Deployment & Logs (itv-appscript CLI)
-itv-appscript deploy      # Deploy .gs files
-itv-appscript logs -n 20  # View recent logs
-itv-appscript logs --follow  # Stream logs
+# Deployment & Logs (use full uv invocation)
+uv run --directory ~/Repos/itv-appscript-deploy itv-appscript deploy --config ./deploy.json
+uv run --directory ~/Repos/itv-appscript-deploy itv-appscript logs -n 20 --config ./deploy.json
 
 # Security
 npm run security:check    # Pre-commit secret scanning
@@ -115,13 +104,13 @@ npm run clean             # Remove token.json (force re-auth)
 
 ```bash
 # 1. Deploy latest code
-itv-appscript deploy
+uv run --directory ~/Repos/itv-appscript-deploy itv-appscript deploy --config ./deploy.json
 
 # 2. Run test function
-itv-appscript run testFontSwap
+uv run --directory ~/Repos/itv-appscript-deploy itv-appscript run testFontSwap --config ./deploy.json
 
 # 3. Check logs (if needed)
-itv-appscript logs -n 20
+uv run --directory ~/Repos/itv-appscript-deploy itv-appscript logs -n 20 --config ./deploy.json
 ```
 
 **Expected output**: Comic Sans MS ↔ Arial swap, 0 errors.
