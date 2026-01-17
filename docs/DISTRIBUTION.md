@@ -28,18 +28,8 @@ All three link to the same GCP project: `itv-mit-slides-formatter`
 
 ## OAuth Scopes
 
-The add-on uses **minimal scopes** (unlike the MCP's super token):
-
-```json
-{
-  "oauthScopes": [
-    "https://www.googleapis.com/auth/presentations",
-    "https://www.googleapis.com/auth/script.container.ui"
-  ]
-}
-```
-
-Users only authorize what the add-on actually needs.
+Runtime scopes are defined in `src/appsscript.json` (the source of truth).
+Deployment scopes are handled automatically by itv-appscript-deploy.
 
 ## Config Files
 
@@ -199,20 +189,13 @@ For now, direct installation is sufficient for ~20 users.
 
 The OAuth client credentials are shared across all developers (same GCP project).
 
-### Option A: Download from GCP Console (if you have access)
+**Download from GCP Console:**
 
-1. Go to [GCP Console](https://console.cloud.google.com/apis/credentials?project=itv-mit-slides-formatter)
-2. Find "itv-slides-formatter OAuth" client
+1. Go to [GCP Console Credentials](https://console.cloud.google.com/apis/credentials?project=itv-mit-slides-formatter)
+2. Find "itv-slides-formatter OAuth" client (Web Application type)
 3. Click download icon → Save as `credentials.json` in project root
 
-### Option B: Get from existing developer
-
-Ask Sameer or another developer to share `credentials.json` via:
-- **1Password** (preferred) — MIT Shared vault
-- **Secure email** — ITV encrypted email
-- **In person** — AirDrop, USB
-
-**Never share via:** Slack, Teams, email attachments, git
+You need Editor access to the GCP project. Ask Sameer if you don't have access.
 
 The credentials.json is the same for everyone — it identifies the app, not the user. Your personal token.json (generated during auth) is what identifies you.
 
@@ -224,7 +207,7 @@ The credentials.json is the same for everyone — it identifies the app, not the
 4. [ ] Create personal Apps Script project at script.google.com
 5. [ ] Link Apps Script project to GCP project `itv-mit-slides-formatter` (Resources → Cloud Platform project)
 6. [ ] Update `deploy.json` with your script ID
-7. [ ] Install CLI: `pipx install ~/Repos/itv-appscript-deploy` (or use `uv run`)
+7. [ ] Install CLI: `uv tool install git+ssh://git@github.com/spm1001/itv-appscript-deploy`
 8. [ ] Authenticate: `itv-appscript auth`
 9. [ ] Deploy: `itv-appscript deploy`
 10. [ ] Test: Open any Google Slides → Extensions → Slide Formatter menu appears

@@ -47,24 +47,36 @@ appsscript.json  - Manifest (scopes, advanced services)
 
 ### CLI Tools
 
-- **itv-auth**: OAuth authentication — see [itv-google-auth](~/Repos/itv-google-auth)
-- **itv-appscript**: Deploy, run, logs — see [itv-appscript-deploy](~/Repos/itv-appscript-deploy)
-
-**Invocation pattern** (always uses latest code):
+Install once:
 ```bash
-uv run --directory ~/Repos/itv-google-auth itv-auth <args>
-uv run --directory ~/Repos/itv-appscript-deploy itv-appscript <command> --config ./deploy.json
+uv tool install git+ssh://git@github.com/spm1001/itv-appscript-deploy
+```
+
+Then use directly:
+```bash
+itv-appscript auth          # OAuth (itv-google-auth is a transitive dependency)
+itv-appscript deploy        # Deploy to Apps Script
+itv-appscript run <func>    # Run function remotely
+itv-appscript logs -n 20    # View logs
 ```
 
 ## Development Workflow
 
 ### First-Time Setup
 
-See the respective tool repos for installation/auth setup. Then:
-
 ```bash
-# Deploy
-uv run --directory ~/Repos/itv-appscript-deploy itv-appscript deploy --config ./deploy.json
+# 1. Install CLI (if not already)
+uv tool install git+ssh://git@github.com/spm1001/itv-appscript-deploy
+
+# 2. Get credentials.json (see docs/DISTRIBUTION.md)
+
+# 3. Set up deploy.json
+cp deploy.json.template deploy.json
+# Edit deploy.json with your script ID
+
+# 4. Authenticate and deploy
+itv-appscript auth
+itv-appscript deploy
 ```
 
 ### Regular Development
@@ -73,23 +85,24 @@ uv run --directory ~/Repos/itv-appscript-deploy itv-appscript deploy --config ./
 # Edit source
 vim src/formatter.gs
 
-# Deploy (using the uv pattern above)
-uv run --directory ~/Repos/itv-appscript-deploy itv-appscript deploy --config ./deploy.json
+# Deploy
+itv-appscript deploy
 
 # Check logs
-uv run --directory ~/Repos/itv-appscript-deploy itv-appscript logs -n 10 --config ./deploy.json
+itv-appscript logs -n 10
 ```
 
 ### Key Commands
 
 ```bash
 # Authentication
-npm run auth              # OAuth flow (auto mode)
-npm run auth:manual       # OAuth flow (manual mode, for SSH)
+itv-appscript auth           # OAuth flow (auto mode)
+itv-appscript auth --manual  # OAuth flow (manual mode, for SSH)
 
-# Deployment & Logs (use full uv invocation)
-uv run --directory ~/Repos/itv-appscript-deploy itv-appscript deploy --config ./deploy.json
-uv run --directory ~/Repos/itv-appscript-deploy itv-appscript logs -n 20 --config ./deploy.json
+# Deployment & Logs
+itv-appscript deploy         # Deploy to Apps Script
+itv-appscript logs -n 20     # View recent logs
+itv-appscript logs --follow  # Stream logs
 
 # Security
 npm run security:check    # Pre-commit secret scanning

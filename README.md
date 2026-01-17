@@ -14,31 +14,32 @@ Google Apps Script tool for automated Google Slides presentation formatting.
 ### Prerequisites
 
 - Python 3.x with [uv](https://docs.astral.sh/uv/)
-- [itv-google-auth](~/Repos/itv-google-auth) — OAuth authentication
-- [itv-appscript-deploy](~/Repos/itv-appscript-deploy) — Apps Script CLI
 - Google Cloud Project with OAuth credentials
 - Google Account with access to target presentations
 
 ### Setup
 
-1. Set up the CLI tools (see their respective repos)
-2. Place OAuth credentials (`credentials.json` from GCP Console)
-3. Enable user-level Apps Script API at https://script.google.com/home/usersettings
-4. Run `npm run auth` to authenticate
-5. Deploy with the command below
+1. Install the CLI:
+   ```bash
+   uv tool install git+ssh://git@github.com/spm1001/itv-appscript-deploy
+   ```
+2. Get `credentials.json` (see docs/DISTRIBUTION.md)
+3. Copy template: `cp deploy.json.template deploy.json` and add your script ID
+4. Enable user-level Apps Script API at https://script.google.com/home/usersettings
+5. Authenticate: `itv-appscript auth`
+6. Deploy: `itv-appscript deploy`
 
 ### Usage
 
 ```bash
 # Deploy changes
-uv run --directory ~/Repos/itv-appscript-deploy itv-appscript deploy --config ./deploy.json
+itv-appscript deploy
 
-# Run test (in Apps Script editor)
-# Open: https://script.google.com/d/1FDkshN59SqLSNzORh2VVoE0_PIZ5_Sqv3Dq7krtwvIL4nV_lI3LrJlin/edit
-# Run testFontSwap()
+# Run test function
+itv-appscript run testFontSwap
 
 # View logs
-uv run --directory ~/Repos/itv-appscript-deploy itv-appscript logs -n 10 --config ./deploy.json
+itv-appscript logs -n 10
 ```
 
 ## Project Structure
@@ -76,11 +77,13 @@ batchSize: 50
 
 ```bash
 # Authentication
-npm run auth              # Auto mode (opens browser)
-npm run auth:manual       # Manual mode (for SSH)
+itv-appscript auth        # Auto mode (opens browser)
+itv-appscript auth --manual  # Manual mode (for SSH)
 
-# Deployment & Logs (use uv run --directory ~/Repos/itv-appscript-deploy itv-appscript ... --config ./deploy.json)
-# deploy, logs -n 20, logs --follow
+# Deployment & Logs
+itv-appscript deploy      # Push changes to Apps Script
+itv-appscript logs -n 20  # View recent logs
+itv-appscript logs --follow  # Stream logs
 
 # Security
 npm run security:check    # Pre-commit validation
