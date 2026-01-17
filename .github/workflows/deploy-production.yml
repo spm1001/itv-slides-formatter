@@ -1,0 +1,36 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Install itv-appscript
+        run: uv tool install git+https://${{ secrets.GH_PAT }}@github.com/spm1001/itv-appscript-deploy
+
+      - name: Write credentials
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
+          echo '${{ secrets.GOOGLE_PRODUCTION_TOKEN }}' > token.production.json
+
+      - name: Deploy to Apps Script
+        run: itv-appscript deploy --config deploy.production.json
+
+      - name: Cleanup credentials
+        if: always()
+        run: |
+          rm -f credentials.json token.production.json

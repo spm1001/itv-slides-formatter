@@ -173,7 +173,36 @@ Anyone who can Okta-auth as measurement@itv.com can refresh the token.
 
 ### For CI/CD
 
-Store `token.production.json` contents in GitHub Secrets as `GOOGLE_PRODUCTION_TOKEN`.
+GitHub Actions workflow (`.github/workflows/deploy-production.yml`) deploys automatically on push to main.
+
+**Required GitHub Secrets:**
+
+| Secret | Source | Notes |
+|--------|--------|-------|
+| `GOOGLE_CREDENTIALS` | `credentials.json` contents | Same for all envs |
+| `GOOGLE_PRODUCTION_TOKEN` | `token.production.json` contents | From measurement@itv.com auth |
+| `GH_PAT` | GitHub Personal Access Token | Needs `repo` scope for private itv-appscript-deploy |
+
+**To set up secrets:**
+```bash
+# Copy file contents to clipboard, paste into GitHub Secrets UI
+cat credentials.json | pbcopy
+cat token.production.json | pbcopy
+```
+
+GitHub repo → Settings → Secrets and variables → Actions → New repository secret
+
+### Manual Production Deploy (Fallback)
+
+If CI/CD fails or you need to deploy manually:
+
+```bash
+# Ensure you have token.production.json (from measurement@itv.com auth)
+itv-appscript deploy --config deploy.production.json
+
+# Create new version (optional, for significant releases)
+itv-appscript deployments create "v1.x - Description" --config deploy.production.json
+```
 
 ## Future: Marketplace Publishing
 
@@ -222,4 +251,4 @@ The credentials.json is the same for everyone — it identifies the app, not the
 6. [ ] Share Apps Script project with developers as Editors
 7. [x] Create versioned deployment (type: Add-on)
 8. [x] Document install URL for users
-9. [ ] Store token in GitHub Secrets for CI/CD
+9. [ ] Store secrets in GitHub (see "For CI/CD" section): `GOOGLE_CREDENTIALS`, `GOOGLE_PRODUCTION_TOKEN`, `GH_PAT`
