@@ -256,6 +256,29 @@ Theme palette is readable via `master.pageProperties.colorScheme.colors`. Each s
 - `masters[].pageElements[].shape.placeholder` — TITLE, BODY, etc. with font/size
 - `layouts[]` — available layout templates with names
 
+## Architecture Notes (Jan 2026)
+
+### Slides Add-on Conversion
+
+This project was originally designed as a **Sheets-bound add-on** that processed external presentations (prompted for URL). It's now a **Slides editor add-on** that formats the active presentation directly.
+
+**Key changes made:**
+- `SpreadsheetApp.getUi()` → `SlidesApp.getUi()` (menu, dialogs)
+- `HtmlService.createHtml()` → `HtmlService.createHtmlOutput()`
+- Added `script.container.ui` scope for modal dialogs
+- `formatPresentation()` now uses `SlidesApp.getActivePresentation()` instead of URL prompt
+
+**Still using SpreadsheetApp (needs fixing):**
+- `config.gs` lines 224-246 — settings persistence assumes a backing spreadsheet. Currently falls back to defaults in Slides context.
+
+### Marketplace Publishing Required
+
+For non-developer users, **Google Workspace Marketplace publishing** is required. The test deployment flow requires Editor access to the Apps Script project.
+
+- Private publishing (ITV domain only) is straightforward
+- No Google review needed for internal tools
+- Enables Extensions → Add-ons → Get add-ons installation
+
 ## Known Issues
 
-None currently. Remote execution (`itv-appscript run`) works after decoupling auth (Jan 2026).
+- **Settings don't persist in Slides context** — `config.gs` uses SpreadsheetApp for storage, which fails silently. Settings work within a session but don't save.

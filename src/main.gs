@@ -13,32 +13,22 @@ function createMenu() {
 function formatPresentation() {
   try {
     const ui = SlidesApp.getUi();
-    const response = ui.prompt(
-      'Format Presentation',
-      'Enter the Google Slides presentation URL:',
-      ui.ButtonSet.OK_CANCEL
-    );
-    
-    if (response.getSelectedButton() === ui.Button.OK) {
-      const presentationUrl = response.getResponseText().trim();
-      
-      if (!presentationUrl) {
-        ui.alert('Error', 'Please enter a valid presentation URL.', ui.ButtonSet.OK);
-        return;
-      }
-      
-      const presentationId = extractPresentationId(presentationUrl);
-      if (!presentationId) {
-        ui.alert('Error', 'Invalid presentation URL format.', ui.ButtonSet.OK);
-        return;
-      }
-      
-      showProgressDialog();
-      
-      processPresentation(presentationId);
-      
-      ui.alert('Success', 'Presentation formatting completed!', ui.ButtonSet.OK);
+
+    // Get the active presentation directly
+    const activePresentation = SlidesApp.getActivePresentation();
+    if (!activePresentation) {
+      ui.alert('Error', 'No active presentation found. Please open a presentation first.', ui.ButtonSet.OK);
+      return;
     }
+
+    const presentationId = activePresentation.getId();
+    Logger.log('Formatting active presentation: ' + presentationId);
+
+    showProgressDialog();
+
+    processPresentation(presentationId);
+
+    ui.alert('Success', 'Presentation formatting completed!', ui.ButtonSet.OK);
   } catch (error) {
     Logger.log('Error in formatPresentation: ' + error.toString());
     SlidesApp.getUi().alert('Error', 'An error occurred: ' + error.message, SlidesApp.getUi().ButtonSet.OK);
