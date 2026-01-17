@@ -195,15 +195,39 @@ When user base grows beyond ~50, consider publishing to Google Workspace Marketp
 
 For now, direct installation is sufficient for ~20 users.
 
+## Getting credentials.json
+
+The OAuth client credentials are shared across all developers (same GCP project).
+
+### Option A: Download from GCP Console (if you have access)
+
+1. Go to [GCP Console](https://console.cloud.google.com/apis/credentials?project=itv-mit-slides-formatter)
+2. Find "itv-slides-formatter OAuth" client
+3. Click download icon → Save as `credentials.json` in project root
+
+### Option B: Get from existing developer
+
+Ask Sameer or another developer to share `credentials.json` via:
+- **1Password** (preferred) — MIT Shared vault
+- **Secure email** — ITV encrypted email
+- **In person** — AirDrop, USB
+
+**Never share via:** Slack, Teams, email attachments, git
+
+The credentials.json is the same for everyone — it identifies the app, not the user. Your personal token.json (generated during auth) is what identifies you.
+
 ## Checklist: Setting Up New Developer
 
 1. [ ] Clone repo: `git clone https://github.com/spm1001/itv-slides-formatter`
-2. [ ] Copy template: `cp deploy.json.template deploy.json`
-3. [ ] Create personal Apps Script project at script.google.com
-4. [ ] Link to GCP project `itv-mit-slides-formatter`
-5. [ ] Update deploy.json with their script ID and credential paths
-6. [ ] Run: `itv-appscript deploy`
-7. [ ] Test: Open Slides, check add-on appears
+2. [ ] Get `credentials.json` (see above) → save to project root
+3. [ ] Copy template: `cp deploy.json.template deploy.json`
+4. [ ] Create personal Apps Script project at script.google.com
+5. [ ] Link Apps Script project to GCP project `itv-mit-slides-formatter` (Resources → Cloud Platform project)
+6. [ ] Update `deploy.json` with your script ID
+7. [ ] Install CLI: `pipx install ~/Repos/itv-appscript-deploy` (or use `uv run`)
+8. [ ] Authenticate: `itv-appscript auth`
+9. [ ] Deploy: `itv-appscript deploy`
+10. [ ] Test: Open any Google Slides → Extensions → Slide Formatter menu appears
 
 ## Checklist: Production Setup (One-Time)
 
