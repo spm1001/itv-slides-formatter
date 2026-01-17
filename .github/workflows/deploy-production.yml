@@ -20,7 +20,7 @@ jobs:
           version: "latest"
 
       - name: Install itv-appscript
-        run: uv tool install git+https://github.com/spm1001/itv-appscript-deploy@main
+        run: uv tool install git+https://${{ secrets.GH_PAT }}@github.com/spm1001/itv-appscript-deploy@main
 
       - name: Write credentials
         run: |
